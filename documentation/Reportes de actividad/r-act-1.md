@@ -18,7 +18,7 @@ Describir las actividades desarrolladas desde el último reporte.
 | Actividad | Integrante responsable | Enlace a commit |
 |------------|------------------------|-----------------|
 |Diagrama inicial de la base|Edgar Alejandro Cortes Martinez|6102c6c|
-| | | |
+|Script de la base de datos|Kendar Emmanuel Stop Gacia |eb91011|
 | | | |
 | | | |
 | | | |
@@ -56,7 +56,7 @@ Documentar el uso de herramientas de inteligencia artificial durante el desarrol
 Describir brevemente la contribución de cada integrante.
 
 - **Integrante 1:** Modelado de la base de datos
-- **Integrante 2:**
+- **Integrante 2:** Script de la base de datos
 - **Integrante 3:**
 - **Integrante 4:**
 
@@ -68,7 +68,7 @@ Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Edgar Alejandro Cortes Martinez: Crear proyecto srping boot
 - Actividad 2 Edgar Alejandro Cortes Martinez: Crear entidades y repositorios
-- Actividad 3
+- Actividad 3 Kendar Emmanuel Strop Garcia: Configurar conexion a Mysql
 - Actividad 4
 - Actividad 5
 
