@@ -35,7 +35,7 @@ Describir los problemas técnicos encontrados y cómo fueron solucionados.
 
 Indicar qué funcionalidades ya se encuentran operativas y cuáles están pendientes.
 
----Actualmente no hay funciones operativas. Esta pendiente crear la base
+---Actualmente no hay funciones operativas.
 
 # 5. Uso de IA generativa
 
