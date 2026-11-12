@@ -19,7 +19,7 @@ Describir las actividades desarrolladas desde el último reporte.
 |------------|------------------------|-----------------|
 |Diagrama inicial de la base|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/6102c6caddcf0460f6f94bed5f50cac17274b604|
 |Script de la base de datos|Kendar Emmanuel Stop Gacia |https://github.com/nigth-dead/desarrollo-web/commit/eb91011e04bc5583907bf7260ded5e9c4f2baed6|
-| | | |
+|Documento de Definicion de Endopints API |Luis David Sosa Fernández |https://github.com/nigth-dead/desarrollo-web/commit/8d27e3563fc7feb8a354bf78a8e490195e1dbcc7 |
 | | | |
 | | | |
 
@@ -57,7 +57,7 @@ Describir brevemente la contribución de cada integrante.
 
 - **Integrante 1:** Modelado de la base de datos
 - **Integrante 2:** Script de la base de datos
-- **Integrante 3:**
+- **Integrante 3:** Luis David Sosa Fernández - Definición de endpoints API
 - **Integrante 4:**
 
 ---
@@ -69,8 +69,8 @@ Indicar las tareas que se realizarán antes del siguiente reporte.
 - Actividad 1 Edgar Alejandro Cortes Martinez: Crear proyecto srping boot
 - Actividad 2 Edgar Alejandro Cortes Martinez: Crear entidades y repositorios
 - Actividad 3 Kendar Emmanuel Strop Garcia: Configurar conexion a Mysql
-- Actividad 4
-- Actividad 5
+- Actividad 4 Luis David Sosa Fernandez: Implementar POST y GET
+- Actividad 5 Luis David Sosa Fernande: Probar mediante CURL
 
 ---
 
