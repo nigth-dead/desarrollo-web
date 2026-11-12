@@ -17,8 +17,8 @@ Describir las actividades desarrolladas desde el último reporte.
 
 | Actividad | Integrante responsable | Enlace a commit |
 |------------|------------------------|-----------------|
-|Diagrama inicial de la base|Edgar Alejandro Cortes Martinez|6102c6c|
-|Script de la base de datos|Kendar Emmanuel Stop Gacia |eb91011|
+|Diagrama inicial de la base|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/6102c6caddcf0460f6f94bed5f50cac17274b604|
+|Script de la base de datos|Kendar Emmanuel Stop Gacia |https://github.com/nigth-dead/desarrollo-web/commit/eb91011e04bc5583907bf7260ded5e9c4f2baed6|
 | | | |
 | | | |
 | | | |
