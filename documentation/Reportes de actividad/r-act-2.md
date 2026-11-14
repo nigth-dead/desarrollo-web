@@ -18,7 +18,7 @@ Describir las actividades desarrolladas desde el último reporte.
 | Actividad | Integrante responsable | Enlace a commit |
 |------------|------------------------|-----------------|
 |Crear proyecto spring boot|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/b98f0db4d14e796db6053b37c4bc6288587b0871|
-|Configurar conexion a MySQL|Kendar Emmanuel Stop Gacia||
+|Configurar conexion a MySQL|Kendar Emmanuel Stop Gacia|https://github.com/nigth-dead/desarrollo-web/commit/cb16c98c2ccfa4f83fb53900e814a3dcbce8a2e6|
 |Crear entidades y repositorios|| |
 |Implementar POST y GET|Luis David Sosa Fernández||
 |Probar mediante CURL|Luis David Sosa Fernández||
@@ -57,7 +57,7 @@ Documentar el uso de herramientas de inteligencia artificial durante el desarrol
 Describir brevemente la contribución de cada integrante.
 
 - **Integrante 1:** Edgar Alejandro Cortes Martinez - Creacion inicial del proyecto con las dependencias necesarias para el correcto funcionamiento mediante sprin initializr
-- **Integrante 2:** 
+- **Integrante 2:**  Kendar Emmanuel Strop Garcia: Creacion la base de datos y el usuario en MySQL usando FLUSH PRIVILEGES;
 - **Integrante 3:** 
 - **Integrante 4:**
 
@@ -68,7 +68,7 @@ Describir brevemente la contribución de cada integrante.
 Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Edgar Alejandro Cortes Martinez: Implementar PUT y DELETE
-- Actividad 2 
+- Actividad 2 Kendar Emmanuel Strop Garcia: Probar persistencia
 - Actividad 3 
 - Actividad 4 
 - Actividad 5 
