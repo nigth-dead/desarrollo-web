@@ -19,9 +19,9 @@ Describir las actividades desarrolladas desde el último reporte.
 |------------|------------------------|-----------------|
 |Crear proyecto spring boot|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/b98f0db4d14e796db6053b37c4bc6288587b0871|
 |Configurar conexion a MySQL|Kendar Emmanuel Stop Gacia|https://github.com/nigth-dead/desarrollo-web/commit/cb16c98c2ccfa4f83fb53900e814a3dcbce8a2e6|
-|Crear entidades y repositorios|| |
-|Implementar POST y GET|Luis David Sosa Fernández||
-|Probar mediante CURL|Luis David Sosa Fernández||
+|Crear entidades y repositorios|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/90fa45ce49b99edf6012faa374817c6d929aaa0c|
+|Implementar POST y GET|Luis David Sosa Fernández|https://github.com/nigth-dead/desarrollo-web/commit/7f2975ef89f89771b4deaa3738262ec306281d78|
+|Probar mediante CURL|Luis David Sosa Fernández|https://github.com/nigth-dead/desarrollo-web/commit/7f2975ef89f89771b4deaa3738262ec306281d78|
 
 
 ---
@@ -56,9 +56,9 @@ Documentar el uso de herramientas de inteligencia artificial durante el desarrol
 
 Describir brevemente la contribución de cada integrante.
 
-- **Integrante 1:** Edgar Alejandro Cortes Martinez - Creacion inicial del proyecto con las dependencias necesarias para el correcto funcionamiento mediante sprin initializr
+- **Integrante 1:** Edgar Alejandro Cortes Martinez - Creacion inicial del proyecto con las dependencias necesarias para el correcto funcionamiento mediante sprin initializr. Ademas de la creacion de las entidades y repositorios definidos en el modelado de la base
 - **Integrante 2:**  Kendar Emmanuel Strop Garcia: Creacion la base de datos y el usuario en MySQL usando FLUSH PRIVILEGES;
-- **Integrante 3:** 
+- **Integrante 3:** Implementacion de los metodos POST y GET, asi como la prueba mediante CURL
 - **Integrante 4:**
 
 ---
@@ -69,9 +69,9 @@ Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Edgar Alejandro Cortes Martinez: Implementar PUT y DELETE
 - Actividad 2 Kendar Emmanuel Strop Garcia: Probar persistencia
-- Actividad 3 
-- Actividad 4 
-- Actividad 5 
+- Actividad 3 Héctor Manuel Toral Huerta: Validar respuestas HTTP
+- Actividad 4 Luis David Sosa Fernandez: Incorporar filtros
+- Actividad 5 Luis David Sosa Fernandez: Implementar observaciones
 
 ---
 
