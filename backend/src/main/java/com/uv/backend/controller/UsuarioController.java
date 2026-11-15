@@ -1,6 +1,6 @@
 package com.uv.backend.controller;
 
-import com.uv.backend.model.Usuario;
+import com.uv.backend.entity.Usuario;
 import com.uv.backend.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +28,15 @@ public class UsuarioController {
 
     // Datos que llegan en el POST
     public record UsuarioRequest(String nombre, String email, String password, String rol) {}
+
+    // Datos para editar (PUT /usuarios/{id}): solo los campos no null se actualizan
+    public record UsuarioEditRequest(String nombre, String email, String rol) {}
+
+    // Datos para cambiar contraseña (PUT /usuarios/{id}/password)
+    public record PasswordRequest(String password) {}
+
+    // Datos para cambiar rol (PUT /usuarios/{id}/rol)
+    public record RolRequest(String rol) {}
 
     // Datos que se devuelven (sin la contrasena)
     public record UsuarioResponse(Integer idUsuario, String nombre, String email, String rol, LocalDateTime fechaRegistro) {
@@ -69,6 +78,77 @@ public class UsuarioController {
         Usuario guardado = usuarioRepository.save(u);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.de(guardado));
+    }
+
+    // Editar usuario (PUT /usuarios/{id})
+    @PutMapping("/{id}")
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody UsuarioEditRequest req) {
+        var opt = usuarioRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Usuario u = opt.get();
+        if (req.nombre() != null && !req.nombre().isBlank()) {
+            u.setNombre(req.nombre());
+        }
+        if (req.email() != null && !req.email().isBlank() && !req.email().equals(u.getEmail())) {
+            if (usuarioRepository.existsByEmail(req.email())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("El email ya esta registrado");
+            }
+            u.setEmail(req.email());
+        }
+        if (req.rol() != null) {
+            String rol = req.rol().toUpperCase();
+            if (!ROLES.contains(rol)) {
+                return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
+            }
+            u.setRol(rol);
+        }
+        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+    }
+
+    // Cambiar contraseña (PUT /usuarios/{id}/password; en el documento era PATCH)
+    @PutMapping("/{id}/password")
+    public ResponseEntity<?> cambiarPassword(@PathVariable Integer id, @RequestBody PasswordRequest req) {
+        if (vacio(req.password())) {
+            return ResponseEntity.badRequest().body("password es obligatorio");
+        }
+        var opt = usuarioRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Usuario u = opt.get();
+        u.setPasswordHash(sha256(req.password()));
+        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+    }
+
+    // Cambiar rol (PUT /usuarios/{id}/rol; en el documento era PATCH)
+    @PutMapping("/{id}/rol")
+    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestBody RolRequest req) {
+        if (vacio(req.rol())) {
+            return ResponseEntity.badRequest().body("rol es obligatorio");
+        }
+        String rol = req.rol().toUpperCase();
+        if (!ROLES.contains(rol)) {
+            return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
+        }
+        var opt = usuarioRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Usuario u = opt.get();
+        u.setRol(rol);
+        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+    }
+
+    // Eliminar usuario (DELETE /usuarios/{id})
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
+        if (!usuarioRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        usuarioRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     private static boolean vacio(String s) {

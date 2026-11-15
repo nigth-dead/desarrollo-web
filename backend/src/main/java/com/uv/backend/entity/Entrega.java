@@ -44,7 +44,7 @@ public class Entrega {
     @Column(name = "archivo_url", length = 500)
     private String archivoUrl;
 
-    @Column(name = "fecha_entrega", insertable = false, updatable = false)
+    @Column(name = "fecha_entrega", updatable = false)
     private LocalDateTime fechaEntrega;
 
     @Column(name = "calificacion", precision = 5, scale = 2)
