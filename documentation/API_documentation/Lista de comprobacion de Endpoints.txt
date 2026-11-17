@@ -1,0 +1,427 @@
+========================================
+AuthController
+Ruta base: /api/auth
+========================================
+
+POST    /api/auth/registro
+        Registrar usuario nuevo
+        Datos requeridos:
+        - nombre
+        - email
+        - password
+        - rol (MAESTRO o ALUMNO)
+
+POST    /api/auth/login
+        Iniciar sesión
+        Datos requeridos:
+        - email
+        - password
+
+GET     /api/auth/me?idUsuario={id}
+        Obtener información de un usuario
+
+========================================
+CursoController
+Ruta base: /api/cursos
+========================================
+
+GET     /api/cursos
+        Listar cursos
+        Parámetros opcionales:
+        - idUsuario
+        - q
+        - idMaestro
+
+GET     /api/cursos/{id}
+        Obtener curso por ID
+
+GET     /api/cursos/{id}/alumnos
+        Ver alumnos inscritos
+        Parámetros:
+        - idUsuario
+        Parámetro opcional:
+        - q
+
+POST    /api/cursos
+        Crear curso
+
+POST    /api/cursos/unirse
+        Unirse a un curso mediante código
+        Parámetro:
+        - idUsuario
+
+POST    /api/cursos/{id}/codigo
+        Generar nuevo código de invitación
+        Parámetro:
+        - idUsuario
+
+PUT     /api/cursos/{id}
+        Editar curso
+
+DELETE  /api/cursos/{id}
+        Eliminar curso
+
+DELETE  /api/cursos/{id}/alumnos/{idAlumno}
+        Dar de baja alumno de un curso
+
+========================================
+EntregaController
+Ruta base: /api
+========================================
+
+GET     /api/tareas/{idTarea}/entregas
+        Listar entregas de una tarea
+        Parámetros:
+        - idUsuario
+        Parámetros opcionales:
+        - calificada
+        - tarde
+
+GET     /api/tareas/{idTarea}/entregas/mia
+        Ver mi entrega
+        Parámetro:
+        - idUsuario
+
+GET     /api/entregas/{id}
+        Obtener una entrega
+        Parámetro:
+        - idUsuario
+
+GET     /api/entregas/{id}/archivo
+        Descargar archivo de una entrega
+        Parámetro:
+        - idUsuario
+
+POST    /api/tareas/{idTarea}/entregas
+        Entregar tarea
+        Parámetro:
+        - idUsuario
+
+PUT     /api/entregas/{id}
+        Reemplazar o actualizar entrega
+        Parámetro:
+        - idUsuario
+
+PATCH   /api/entregas/{id}/calificacion
+        Calificar entrega
+        Parámetro:
+        - idUsuario
+
+========================================
+EquipoController
+Ruta base: /api
+========================================
+
+GET     /api/tareas/{idTarea}/equipos
+        Listar equipos de una tarea
+        Parámetro:
+        - idUsuario
+
+GET     /api/equipos/{id}
+        Obtener equipo por ID
+        Parámetro:
+        - idUsuario
+
+POST    /api/tareas/{idTarea}/equipos
+        Crear equipo
+        Parámetro:
+        - idUsuario
+
+POST    /api/equipos/{id}/integrantes
+        Agregar integrantes a un equipo
+        Parámetro:
+        - idUsuario
+
+PUT     /api/equipos/{id}
+        Editar equipo
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/equipos/{id}
+        Eliminar equipo
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/equipos/{id}/integrantes/{idAlumno}
+        Eliminar integrante del equipo
+        Parámetro:
+        - idUsuario
+
+========================================
+ExamenController
+Ruta base: /api
+========================================
+
+GET     /api/cursos/{idCurso}/examenes
+        Listar exámenes de un curso
+        Parámetro:
+        - idUsuario
+        Parámetros opcionales:
+        - estado
+        - q
+
+GET     /api/examenes/{id}
+        Obtener examen por ID
+        Parámetro:
+        - idUsuario
+
+POST    /api/cursos/{idCurso}/examenes
+        Crear examen
+        Parámetro:
+        - idUsuario
+
+PUT     /api/examenes/{id}
+        Editar examen
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/examenes/{id}
+        Eliminar examen
+        Parámetro:
+        - idUsuario
+
+========================================
+ExamenResultadoController
+Ruta base: /api
+========================================
+
+POST    /api/examenes/{idExamen}/resultados
+        Enviar examen resuelto
+        Parámetro:
+        - idUsuario
+
+GET     /api/examenes/{idExamen}/resultados
+        Ver todos los resultados de un examen
+        Parámetro:
+        - idUsuario
+        Parámetros opcionales:
+        - estado
+        - minCalificacion
+        - maxCalificacion
+GET     /api/examenes/{idExamen}/resultados/mio
+        Ver mi resultado del examen
+        Parámetro:
+        - idUsuario
+
+GET     /api/resultados/{id}
+        Ver resultado específico con respuestas
+        Parámetro:
+        - idUsuario
+
+========================================
+ForoComentarioController
+Ruta base: /api
+========================================
+
+GET     /api/foros/{idForo}/comentarios
+        Listar comentarios de un foro
+        Parámetro:
+        - idUsuario
+        Parámetros opcionales:
+        - idAutor
+        - q
+
+POST    /api/foros/{idForo}/comentarios
+        Crear comentario en un foro
+        Parámetro:
+        - idUsuario
+
+PUT     /api/comentarios/{id}
+        Editar comentario
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/comentarios/{id}
+        Eliminar comentario
+        Parámetro:
+        - idUsuario
+
+========================================
+ForoComentarioController
+Ruta base: /api
+========================================
+
+GET     /api/foros/{idForo}/comentarios
+        Listar comentarios de un foro
+        Parámetro:
+        - idUsuario
+        Parámetros opcionales:
+        - idAutor
+        - q
+
+POST    /api/foros/{idForo}/comentarios
+        Crear comentario en un foro
+        Parámetro:
+        - idUsuario
+
+PUT     /api/comentarios/{id}
+        Editar comentario
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/comentarios/{id}
+        Eliminar comentario
+        Parámetro:
+        - idUsuario
+
+========================================
+NotificacionController
+Ruta base: /api
+========================================
+
+GET     /api/notificaciones
+        Ver mis notificaciones
+        Parámetro:
+        - idUsuario
+        Parámetro opcional:
+        - leido
+
+GET     /api/notificaciones/no-leidas/total
+        Obtener total de notificaciones no leídas
+        Parámetro:
+        - idUsuario
+
+PATCH   /api/notificaciones/{id}/leida
+        Marcar una notificación como leída
+        Parámetro:
+        - idUsuario
+
+PATCH   /api/notificaciones/leidas
+        Marcar todas las notificaciones como leídas
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/notificaciones/{id}
+        Eliminar notificación
+        Parámetro:
+        - idUsuario
+
+========================================
+PreguntaExamenController
+Ruta base: /api
+========================================
+
+GET     /api/examenes/{idExamen}/preguntas
+        Listar preguntas de un examen
+        Parámetro:
+        - idUsuario
+        Parámetro opcional:
+        - tipo
+
+POST    /api/examenes/{idExamen}/preguntas
+        Crear pregunta en un examen
+        Parámetro:
+        - idUsuario
+
+PUT     /api/preguntas/{id}
+        Editar pregunta
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/preguntas/{id}
+        Eliminar pregunta
+        Parámetro:
+        - idUsuario
+
+========================================
+PreguntaExamenController
+Ruta base: /api
+========================================
+
+GET     /api/examenes/{idExamen}/preguntas
+        Listar preguntas de un examen
+        Parámetro:
+        - idUsuario
+        Parámetro opcional:
+        - tipo
+
+POST    /api/examenes/{idExamen}/preguntas
+        Crear pregunta en un examen
+        Parámetro:
+        - idUsuario
+
+PUT     /api/preguntas/{id}
+        Editar pregunta
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/preguntas/{id}
+        Eliminar pregunta
+        Parámetro:
+        - idUsuario
+
+========================================
+RespuestaAlumnoController
+Ruta base: /api
+========================================
+
+PATCH   /api/respuestas/{id}
+        Calificar respuesta de alumno
+        Parámetro:
+        - idUsuario
+
+========================================
+TareaController
+Ruta base: /api
+========================================
+
+GET     /api/cursos/{idCurso}/tareas
+        Listar tareas de un curso
+        Parámetro:
+        - idUsuario
+        Parámetros opcionales:
+        - q
+        - estado
+        - esEquipo
+
+GET     /api/tareas/{id}
+        Obtener tarea por ID
+        Parámetro:
+        - idUsuario
+
+POST    /api/cursos/{idCurso}/tareas
+        Crear tarea
+        Parámetro:
+        - idUsuario
+
+PUT     /api/tareas/{id}
+        Editar tarea
+        Parámetro:
+        - idUsuario
+
+DELETE  /api/tareas/{id}
+        Eliminar tarea
+        Parámetro:
+        - idUsuario
+
+========================================
+UsuarioController
+Ruta base: /api/usuarios
+========================================
+
+GET     /api/usuarios
+        Listar usuarios
+        Parámetros opcionales:
+        - rol
+        - q
+
+GET     /api/usuarios/{id}
+        Obtener usuario por ID
+
+POST    /api/usuarios
+        Crear usuario
+
+PUT     /api/usuarios/{id}
+        Editar usuario
+
+PATCH   /api/usuarios/{id}/password
+        Cambiar contraseña
+
+PATCH   /api/usuarios/{id}/rol
+        Cambiar rol
+
+DELETE  /api/usuarios/{id}
+        Eliminar usuario
+
+No fue posible realizar pruebas funcionales debido a que la aplicación no inicia correctamente por falta de configuración de conexión a la base de datos (arreglo que aplicaré próximamente)
+
