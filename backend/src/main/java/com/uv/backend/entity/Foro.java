@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,7 +42,8 @@ public class Foro {
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
-    @Column(name = "fecha_creacion", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
 
     @JsonIgnore

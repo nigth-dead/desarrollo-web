@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -36,7 +38,8 @@ public class Notificacion {
     @Column(name = "leido")
     private Boolean leido;
 
-    @Column(name = "fecha_envio", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "fecha_envio", updatable = false)
     private LocalDateTime fechaEnvio;
 
     /**

@@ -1,5 +1,24 @@
 package com.uv.backend.controller;
 
+import java.math.BigDecimal;
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.web.bind.annotation.PatchMapping;
+import com.uv.backend.entity.Notificacion;
+import com.uv.backend.repository.INotificacion;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import com.uv.backend.entity.Equipo;
+import com.uv.backend.entity.Tarea;
+import com.uv.backend.entity.Usuario;
+import com.uv.backend.repository.IEquipo;
+import com.uv.backend.repository.IProrroga;
+import com.uv.backend.repository.ITarea;
+import com.uv.backend.service.AccesoCurso;
+
 import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,5 +94,202 @@ public class EntregaController {
             }
         }
         return null;
+    }
+
+    // ===== GET y POST =====
+
+    @Autowired
+    ITarea iTarea;
+    @Autowired
+    IEquipo iEquipo;
+    @Autowired
+    IProrroga iProrroga;
+    @Autowired
+    AccesoCurso accesoCurso;
+
+    public record EntregaRequest(String archivoUrl) {}
+
+    //busca el equipo del alumno dentro de una tarea por equipos
+    private Optional<Equipo> equipoDelAlumno(Tarea tarea, Integer idAlumno) {
+        return iEquipo.findByTareaIdTarea(tarea.getIdTarea()).stream()
+                .filter(e -> e.getIntegrantes().stream().anyMatch(u -> u.getIdUsuario().equals(idAlumno)))
+                .findFirst();
+    }
+
+    //busca la entrega del alumno (individual) o de su equipo
+    private Optional<Entrega> entregaDelAlumno(Tarea tarea, Integer idAlumno) {
+        Optional<Equipo> equipo = Boolean.TRUE.equals(tarea.getEsEquipo())
+                ? equipoDelAlumno(tarea, idAlumno) : Optional.empty();
+        return iEntrega.findByTareaIdTarea(tarea.getIdTarea()).stream()
+                .filter(e -> (e.getAlumno() != null && e.getAlumno().getIdUsuario().equals(idAlumno))
+                        || (equipo.isPresent() && e.getEquipo() != null
+                                && e.getEquipo().getIdEquipo().equals(equipo.get().getIdEquipo())))
+                .findFirst();
+    }
+
+    //fecha limite real: la de la tarea o la de una prorroga aprobada
+    private LocalDateTime fechaLimiteDe(Tarea tarea, Integer idAlumno, Equipo equipo) {
+        LocalDateTime limite = tarea.getFechaLimite();
+        for (var p : iProrroga.findByTareaIdTarea(tarea.getIdTarea())) {
+            boolean esSuya = (p.getAlumno() != null && p.getAlumno().getIdUsuario().equals(idAlumno))
+                    || (equipo != null && p.getEquipo() != null && p.getEquipo().getIdEquipo().equals(equipo.getIdEquipo()));
+            if (esSuya && Boolean.TRUE.equals(p.getAprobada())
+                    && (limite == null || p.getNuevaFechaLimite().isAfter(limite))) {
+                limite = p.getNuevaFechaLimite();
+            }
+        }
+        return limite;
+    }
+
+    //ver entregas de una tarea (maestro)
+    //filtros: ?calificada=true|false, ?tarde=true|false (entregada despues de la fecha limite de la tarea)
+    @GetMapping ("/tareas/{idTarea}/entregas")
+    public ResponseEntity<?> listarEntregas(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
+            @RequestParam(required = false) Boolean calificada,
+            @RequestParam(required = false) Boolean tarde) {
+        Optional<Tarea> tarea = iTarea.findById(idTarea);
+        if (tarea.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        if (!accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede ver todas las entregas");
+        }
+        LocalDateTime limite = tarea.get().getFechaLimite();
+        return ResponseEntity.ok(iEntrega.findByTareaIdTarea(idTarea).stream()
+                .filter(e -> calificada == null || calificada == (e.getCalificacion() != null))
+                .filter(e -> {
+                    if (tarde == null) {
+                        return true;
+                    }
+                    boolean fueTarde = limite != null && e.getFechaEntrega() != null
+                            && e.getFechaEntrega().isAfter(limite);
+                    return tarde == fueTarde;
+                })
+                .toList());
+    }
+
+    //ver mi entrega (o la de mi equipo)
+    @GetMapping ("/tareas/{idTarea}/entregas/mia")
+    public ResponseEntity<?> miEntrega(@PathVariable Integer idTarea, @RequestParam Integer idUsuario) {
+        Optional<Tarea> tarea = iTarea.findById(idTarea);
+        if (tarea.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        if (!accesoCurso.esAlumnoInscrito(tarea.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No estas inscrito en este curso");
+        }
+        return entregaDelAlumno(tarea.get(), idUsuario)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Aun no has entregado esta tarea"));
+    }
+
+    //entregar tarea
+    @PostMapping ("/tareas/{idTarea}/entregas")
+    public ResponseEntity<?> entregar(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
+            @RequestBody EntregaRequest req) {
+        Optional<Tarea> opt = iTarea.findById(idTarea);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        Tarea tarea = opt.get();
+        if (!accesoCurso.esAlumnoInscrito(tarea.getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No estas inscrito en este curso");
+        }
+        if (req.archivoUrl() == null || req.archivoUrl().isBlank()) {
+            return ResponseEntity.badRequest().body("archivoUrl es obligatorio");
+        }
+        Usuario alumno = iUsuario.findById(idUsuario).get();
+        Equipo equipo = null;
+        if (Boolean.TRUE.equals(tarea.getEsEquipo())) {
+            Optional<Equipo> eq = equipoDelAlumno(tarea, idUsuario);
+            if (eq.isEmpty()) {
+                return ResponseEntity.badRequest().body("La tarea es por equipo y no perteneces a ningun equipo");
+            }
+            equipo = eq.get();
+        }
+        if (entregaDelAlumno(tarea, idUsuario).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Ya existe una entrega; usa PUT para reemplazarla");
+        }
+        LocalDateTime limite = fechaLimiteDe(tarea, idUsuario, equipo);
+        if (limite != null && LocalDateTime.now().isAfter(limite)) {
+            return ResponseEntity.badRequest().body("La fecha limite ya paso");
+        }
+        //individual: se llena id_alumno; por equipo: se llena id_equipo
+        Entrega entrega = new Entrega(tarea, equipo == null ? alumno : null, equipo, req.archivoUrl());
+        entrega.setFechaEntrega(LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.CREATED).body(iEntrega.save(entrega));
+    }
+
+    //ver entrega (maestro o autor)
+    @GetMapping ("/entregas/{id}")
+    public ResponseEntity<?> obtenerEntrega(@PathVariable Integer id, @RequestParam Integer idUsuario) {
+        Optional<Entrega> entrega = iEntrega.findById(id);
+        if (entrega.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
+        }
+        if (!esMaestro(entrega.get(), idUsuario) && !esDuenoOIntegrante(entrega.get(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
+        }
+        return ResponseEntity.ok(entrega.get());
+    }
+
+    //descargar archivo: redirige a la URL del archivo
+    @GetMapping ("/entregas/{id}/archivo")
+    public ResponseEntity<?> descargarArchivo(@PathVariable Integer id, @RequestParam Integer idUsuario) {
+        Optional<Entrega> entrega = iEntrega.findById(id);
+        if (entrega.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
+        }
+        if (!esMaestro(entrega.get(), idUsuario) && !esDuenoOIntegrante(entrega.get(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
+        }
+        if (entrega.get().getArchivoUrl() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no tiene archivo");
+        }
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(entrega.get().getArchivoUrl())).build();
+    }
+
+    // ===== PATCH =====
+
+    @Autowired
+    INotificacion iNotificacion;
+
+    public record CalificacionRequest(BigDecimal calificacion, String comentarioMaestro) {}
+
+    //calificar entrega (solo el maestro del curso). Avisa al alumno o a los integrantes del equipo
+    @PatchMapping ("/entregas/{id}/calificacion")
+    public ResponseEntity<?> calificarEntrega(@PathVariable Integer id, @RequestParam Integer idUsuario,
+            @RequestBody CalificacionRequest req) {
+        Optional<Entrega> opt = iEntrega.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
+        }
+        Entrega entrega = opt.get();
+        if (!esMaestro(entrega, idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede calificar");
+        }
+        if (req.calificacion() == null) {
+            return ResponseEntity.badRequest().body("calificacion es obligatoria");
+        }
+        if (req.calificacion().signum() < 0 || req.calificacion().compareTo(BigDecimal.valueOf(100)) > 0) {
+            return ResponseEntity.badRequest().body("calificacion debe estar entre 0 y 100");
+        }
+        entrega.setCalificacion(req.calificacion());
+        if (req.comentarioMaestro() != null) {
+            entrega.setComentarioMaestro(req.comentarioMaestro());
+        }
+        Entrega guardada = iEntrega.save(entrega);
+
+        String mensaje = "Tu entrega de \"" + entrega.getTarea().getTitulo() + "\" fue calificada: "
+                + req.calificacion().stripTrailingZeros().toPlainString();
+        List<Usuario> destinatarios = entrega.getAlumno() != null
+                ? List.of(entrega.getAlumno())
+                : entrega.getEquipo().getIntegrantes();
+        for (Usuario u : destinatarios) {
+            Notificacion n = new Notificacion(u, mensaje);
+            n.setLeido(false);
+            iNotificacion.save(n);
+        }
+        return ResponseEntity.ok(guardada);
     }
 }

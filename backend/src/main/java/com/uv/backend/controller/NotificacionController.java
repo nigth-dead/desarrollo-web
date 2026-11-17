@@ -1,11 +1,17 @@
 package com.uv.backend.controller;
 
+import java.util.Comparator;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +35,7 @@ public class NotificacionController {
     }
 
     //marcar una como leída
-    @PutMapping ("/notificaciones/{id}/leida")
+    @PatchMapping ("/notificaciones/{id}/leida")
     public Notificacion marcarLeida(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iNotificacion.existsById(id) || !iUsuario.existsById(idUsuario)) {
@@ -45,7 +51,7 @@ public class NotificacionController {
     }
 
     //marcar todas como leídas
-    @PutMapping ("/notificaciones/leidas")
+    @PatchMapping ("/notificaciones/leidas")
     public String marcarTodasLeidas(@RequestParam Integer idUsuario) {
         if (!iUsuario.existsById(idUsuario)) {
             return "El usuario no existe";
@@ -74,5 +80,32 @@ public class NotificacionController {
         }
         iNotificacion.deleteById(id);
         return "Notificación eliminada";
+    }
+
+    // ===== GET =====
+
+    //ver mis notificaciones (filtro opcional ?leido=false), las mas recientes primero
+    @GetMapping ("/notificaciones")
+    public ResponseEntity<?> misNotificaciones(@RequestParam Integer idUsuario,
+            @RequestParam(required = false) Boolean leido) {
+        if (!iUsuario.existsById(idUsuario)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
+        }
+        return ResponseEntity.ok(iNotificacion.findByUsuarioIdUsuario(idUsuario).stream()
+                .filter(n -> leido == null || leido.equals(Boolean.TRUE.equals(n.getLeido())))
+                .sorted(Comparator.comparing(Notificacion::getIdNotificacion).reversed())
+                .toList());
+    }
+
+    //contar no leidas (para el icono de la campana)
+    @GetMapping ("/notificaciones/no-leidas/total")
+    public ResponseEntity<?> totalNoLeidas(@RequestParam Integer idUsuario) {
+        if (!iUsuario.existsById(idUsuario)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
+        }
+        long total = iNotificacion.findByUsuarioIdUsuario(idUsuario).stream()
+                .filter(n -> !Boolean.TRUE.equals(n.getLeido()))
+                .count();
+        return ResponseEntity.ok(Map.of("total", total));
     }
 }

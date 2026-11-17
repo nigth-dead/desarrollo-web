@@ -16,4 +16,12 @@ public interface INotificacion extends CrudRepository<Notificacion, Integer> {
      * @return notificaciones pendientes del usuario
      */
     List<Notificacion> findByUsuarioIdUsuarioAndLeidoFalse(Integer idUsuario);
+
+    /**
+     * Lista todas las notificaciones de un usuario.
+     *
+     * @param idUsuario identificador del usuario
+     * @return notificaciones del usuario
+     */
+    List<Notificacion> findByUsuarioIdUsuario(Integer idUsuario);
 }

@@ -1,5 +1,16 @@
 package com.uv.backend.controller;
 
+import java.util.List;
+import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import com.uv.backend.entity.Tarea;
+import com.uv.backend.entity.Usuario;
+import com.uv.backend.repository.ITarea;
+import com.uv.backend.service.AccesoCurso;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -107,5 +118,101 @@ public class EquipoController {
 
         iEquipo.save(equipo);
         return "Integrante eliminado";
+    }
+
+    // ===== GET y POST =====
+
+    @Autowired
+    ITarea iTarea;
+    @Autowired
+    AccesoCurso accesoCurso;
+
+    public record EquipoRequest(String nombreEquipo) {}
+
+    public record IntegrantesRequest(List<Integer> idsAlumnos) {}
+
+    //ver equipos de una tarea
+    @GetMapping ("/tareas/{idTarea}/equipos")
+    public ResponseEntity<?> listarEquipos(@PathVariable Integer idTarea, @RequestParam Integer idUsuario) {
+        Optional<Tarea> tarea = iTarea.findById(idTarea);
+        if (tarea.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        if (!accesoCurso.esMiembro(tarea.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        return ResponseEntity.ok(iEquipo.findByTareaIdTarea(idTarea));
+    }
+
+    //crear equipo
+    @PostMapping ("/tareas/{idTarea}/equipos")
+    public ResponseEntity<?> crearEquipo(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
+            @RequestBody EquipoRequest req) {
+        Optional<Tarea> tarea = iTarea.findById(idTarea);
+        if (tarea.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        if (!accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede crear equipos");
+        }
+        if (!Boolean.TRUE.equals(tarea.get().getEsEquipo())) {
+            return ResponseEntity.badRequest().body("La tarea no es por equipo");
+        }
+        if (req.nombreEquipo() == null || req.nombreEquipo().isBlank()) {
+            return ResponseEntity.badRequest().body("nombreEquipo es obligatorio");
+        }
+        Equipo equipo = iEquipo.save(new Equipo(tarea.get(), req.nombreEquipo()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(equipo);
+    }
+
+    //ver equipo
+    @GetMapping ("/equipos/{id}")
+    public ResponseEntity<?> obtenerEquipo(@PathVariable Integer id, @RequestParam Integer idUsuario) {
+        Optional<Equipo> equipo = iEquipo.findById(id);
+        if (equipo.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
+        }
+        if (!accesoCurso.esMiembro(equipo.get().getTarea().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        return ResponseEntity.ok(equipo.get());
+    }
+
+    //agregar integrantes
+    @PostMapping ("/equipos/{id}/integrantes")
+    public ResponseEntity<?> agregarIntegrantes(@PathVariable Integer id, @RequestParam Integer idUsuario,
+            @RequestBody IntegrantesRequest req) {
+        Optional<Equipo> opt = iEquipo.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
+        }
+        Equipo equipo = opt.get();
+        if (!accesoCurso.esMaestro(equipo.getTarea().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede agregar integrantes");
+        }
+        if (req.idsAlumnos() == null || req.idsAlumnos().isEmpty()) {
+            return ResponseEntity.badRequest().body("idsAlumnos es obligatorio");
+        }
+        List<Equipo> equiposDeLaTarea = iEquipo.findByTareaIdTarea(equipo.getTarea().getIdTarea());
+        for (Integer idAlumno : req.idsAlumnos()) {
+            if (!accesoCurso.esAlumnoInscrito(equipo.getTarea().getCurso(), idAlumno)) {
+                return ResponseEntity.badRequest().body("El alumno " + idAlumno + " no esta inscrito en el curso");
+            }
+            boolean yaEnEsteEquipo = equipo.getIntegrantes().stream()
+                    .anyMatch(u -> u.getIdUsuario().equals(idAlumno));
+            if (yaEnEsteEquipo) {
+                continue;
+            }
+            boolean enOtroEquipo = equiposDeLaTarea.stream()
+                    .filter(e -> !e.getIdEquipo().equals(equipo.getIdEquipo()))
+                    .anyMatch(e -> e.getIntegrantes().stream().anyMatch(u -> u.getIdUsuario().equals(idAlumno)));
+            if (enOtroEquipo) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("El alumno " + idAlumno + " ya pertenece a otro equipo de esta tarea");
+            }
+            Usuario alumno = iUsuario.findById(idAlumno).get();
+            equipo.getIntegrantes().add(alumno);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(iEquipo.save(equipo));
     }
 }

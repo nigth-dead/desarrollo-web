@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,7 +39,8 @@ public class ForoComentario {
     @Column(name = "contenido", nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
-    @Column(name = "fecha_comentario", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "fecha_comentario", updatable = false)
     private LocalDateTime fechaComentario;
 
     /**

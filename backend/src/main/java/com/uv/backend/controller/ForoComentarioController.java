@@ -1,5 +1,16 @@
 package com.uv.backend.controller;
 
+import java.util.Comparator;
+import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import com.uv.backend.entity.Foro;
+import com.uv.backend.repository.IForo;
+import com.uv.backend.service.AccesoCurso;
+import com.uv.backend.service.Filtros;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,5 +81,52 @@ public class ForoComentarioController {
         }
         iForoComentario.deleteById(id);
         return "Comentario eliminado";
+    }
+
+    // ===== GET y POST =====
+
+    @Autowired
+    IForo iForo;
+    @Autowired
+    AccesoCurso accesoCurso;
+
+    public record ComentarioRequest(String contenido) {}
+
+    //ver comentarios del foro (orden cronologico)
+    //filtros: ?idAutor= (comentarios de un usuario), ?q= (texto del comentario)
+    @GetMapping ("/foros/{idForo}/comentarios")
+    public ResponseEntity<?> listarComentarios(@PathVariable Integer idForo, @RequestParam Integer idUsuario,
+            @RequestParam(required = false) Integer idAutor,
+            @RequestParam(required = false) String q) {
+        Optional<Foro> foro = iForo.findById(idForo);
+        if (foro.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El foro no existe");
+        }
+        if (!accesoCurso.esMiembro(foro.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        return ResponseEntity.ok(iForoComentario.findByForoIdForo(idForo).stream()
+                .filter(c -> idAutor == null || c.getUsuario().getIdUsuario().equals(idAutor))
+                .filter(c -> Filtros.contiene(q, c.getContenido()))
+                .sorted(Comparator.comparing(ForoComentario::getIdComentario))
+                .toList());
+    }
+
+    //comentar
+    @PostMapping ("/foros/{idForo}/comentarios")
+    public ResponseEntity<?> comentar(@PathVariable Integer idForo, @RequestParam Integer idUsuario,
+            @RequestBody ComentarioRequest req) {
+        Optional<Foro> foro = iForo.findById(idForo);
+        if (foro.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El foro no existe");
+        }
+        if (!accesoCurso.esMiembro(foro.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        if (req.contenido() == null || req.contenido().isBlank()) {
+            return ResponseEntity.badRequest().body("contenido es obligatorio");
+        }
+        ForoComentario c = new ForoComentario(foro.get(), iUsuario.findById(idUsuario).get(), req.contenido());
+        return ResponseEntity.status(HttpStatus.CREATED).body(iForoComentario.save(c));
     }
 }

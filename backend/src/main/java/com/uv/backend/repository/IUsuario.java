@@ -2,12 +2,12 @@ package com.uv.backend.repository;
 
 import com.uv.backend.entity.Usuario;
 import java.util.Optional;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * Repositorio Spring Data JPA para la entidad {@link Usuario}.
  */
-public interface IUsuario extends CrudRepository<Usuario, Integer> {
+public interface IUsuario extends JpaRepository<Usuario, Integer> {
 
     /**
      * Busca un usuario por su correo electrónico.
