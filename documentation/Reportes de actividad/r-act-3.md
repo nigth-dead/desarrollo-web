@@ -91,10 +91,9 @@ Describir brevemente la contribución de cada integrante.
 Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Luis David Sosa Fernández: Implementar Funciones Fetch +  Extra Token Auth
-- Actividad 2 [Integrante]:
-- Actividad 3 [Integrante]: 
-- Actividad 4 [Integrante]:
-- Actividad 5 [Integrante]: 
+- Actividad 2 Edgar Alejandro Cortes Martinez: Crear formularios + Integrar backend y front end
+- Actividad 3 Héctor Manuel Toral Huerta: mostrar errores y confirmaciones
+- Actividad 4 Kendar Emanuel Strop Garcia: Crear tablas
 
 ---
 
