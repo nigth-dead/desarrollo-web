@@ -20,7 +20,7 @@ En esta tercera entrega se implementaron los endpoints PUT y DELETE de los recur
 | Actividad | Integrante responsable | Enlace a commit |
 |------------|------------------------|-----------------|
 |Implementar PUT y DELETE|Edgar Alejandro Cortes Martinez|https://github.com/nigth-dead/desarrollo-web/commit/bc08c755edb15bb6f3c26305e16a3ef998932f02|
-|Probar persistencia|Kendar Emmanuel Strop Garcia|[enlace al commit]|
+|Probar persistencia|Kendar Emmanuel Strop Garcia|https://github.com/nigth-dead/desarrollo-web/commit/54dcc631235767d35b1c4ab41d5c6974d5601a14|
 |Validar respuestas HTTP|Héctor Manuel Toral Huerta|[enlace al commit]|
 |Incorporar filtros|Luis David Sosa Fernández|https://github.com/nigth-dead/desarrollo-web/commit/d19afdf96c0922eda5a65715fb6151a53eb11de9|
 |Implementar observaciones|Luis David Sosa Fernández|https://github.com/nigth-dead/desarrollo-web/commit/d19afdf96c0922eda5a65715fb6151a53eb11de9|
@@ -80,7 +80,7 @@ Documentar el uso de herramientas de inteligencia artificial durante el desarrol
 Describir brevemente la contribución de cada integrante.
 
 - **Integrante 1:** Edgar Alejandro Cortes Martinez - Implementación de los métodos PUT y DELETE de los recursos del sistema.
-- **Integrante 2:** Kendar Emmanuel Strop Garcia - Pruebas de persistencia de los datos en MySQL. [completar]
+- **Integrante 2:** Kendar Emmanuel Strop Garcia - Pruebas de persistencia de los datos en MySQL. 
 - **Integrante 3:** Luis David Sosa Fernández - Implementación de los GET y POST faltantes, incorporación de filtros de búsqueda, atención de las observaciones del código y documentación de las pruebas con curl.
 - **Integrante 4:** Héctor Manuel Toral Huerta - Validación de las respuestas HTTP de la API. [completar]
 
@@ -92,7 +92,7 @@ Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Luis David Sosa Fernández: Implementar Funciones Fetch +  Extra Token Auth
 - Actividad 2 [Integrante]:
-- Actividad 3 [Integrante]: 
+- Actividad 3 Kendar Emmanuel Strop Garcia: Construir tablas. 
 - Actividad 4 [Integrante]:
 - Actividad 5 [Integrante]: 
 
