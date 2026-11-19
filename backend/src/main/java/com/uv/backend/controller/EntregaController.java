@@ -75,6 +75,11 @@ public class EntregaController {
             if (entregaNueva.getArchivoUrl() != null) {
                 entregaBase.setArchivoUrl(entregaNueva.getArchivoUrl());
                 entregaBase.setFechaEntrega(LocalDateTime.now());
+            }
+            if (entregaNueva.getDescripcion() != null) {
+                entregaBase.setDescripcion(entregaNueva.getDescripcion());
+            }
+            if (entregaNueva.getArchivoUrl() != null || entregaNueva.getDescripcion() != null) {
                 iEntrega.save(entregaBase);
                 return entregaBase;
             }
@@ -107,7 +112,7 @@ public class EntregaController {
     @Autowired
     AccesoCurso accesoCurso;
 
-    public record EntregaRequest(String archivoUrl) {}
+    public record EntregaRequest(String archivoUrl, String descripcion) {}
 
     //busca el equipo del alumno dentro de una tarea por equipos
     private Optional<Equipo> equipoDelAlumno(Tarea tarea, Integer idAlumno) {
@@ -216,6 +221,7 @@ public class EntregaController {
         }
         //individual: se llena id_alumno; por equipo: se llena id_equipo
         Entrega entrega = new Entrega(tarea, equipo == null ? alumno : null, equipo, req.archivoUrl());
+        entrega.setDescripcion(req.descripcion());
         entrega.setFechaEntrega(LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(iEntrega.save(entrega));
     }
