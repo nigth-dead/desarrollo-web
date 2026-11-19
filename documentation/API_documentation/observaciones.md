@@ -12,8 +12,10 @@ Revisión del backend contra la especificación de endpoints (`Definición_Endpo
 | 4 | No existía `PATCH /entregas/{id}/calificacion` | Implementado: solo el maestro, calificación de 0 a 100, avisa con notificación al alumno o al equipo |
 | 5 | Repositorios duplicados para la misma tabla (`CursoRepository`/`ICurso`, `UsuarioRepository`/`IUsuario`) | Se dejaron solo `ICurso` e `IUsuario` (ahora `JpaRepository`) |
 | 6 | Al calificar una respuesta abierta, el resultado del examen se quedaba en `PENDIENTE_MANUAL` y sin calificación final | Cuando todas las respuestas tienen puntaje, el resultado pasa a `CALIFICADO` y `calificacion_final` es la suma |
+| 7 | No había autenticación: cualquiera podía mandar el `idUsuario` de otra persona | Login con token JWT (HS256, 8 horas). Todas las rutas menos login y registro piden `Authorization: Bearer`; si `?idUsuario=` no es el del token responde 403 |
+| 8 | El frontend no podía usar fetch contra el backend (CORS) | CORS habilitado para `localhost` en cualquier puerto (`app.cors.origenes`) |
 
-Verificado con `pruebas-api.sh`: 289 casos, 0 fallos.
+Verificado con `pruebas-api.sh`: 304 casos, 0 fallos.
 
 ## Pendientes (requieren decisión del equipo)
 
@@ -21,4 +23,3 @@ Verificado con `pruebas-api.sh`: 289 casos, 0 fallos.
 - **Prórrogas:** `aprobada` es booleano, no distingue *pendiente* de *rechazada*. Se propone un campo `estado` (PENDIENTE / APROBADA / RECHAZADA).
 - **Puntaje de respuestas abiertas:** `PATCH /respuestas/{id}` no valida que el puntaje no supere el valor de la pregunta.
 - **`SCRIPT-BASE.sql`:** ya no crea las tablas (las genera Hibernate con `ddl-auto=update`); conviene documentarlo o volver a incluirlas.
-- **Login:** todavía no hay token; el usuario se identifica con `?idUsuario=`.

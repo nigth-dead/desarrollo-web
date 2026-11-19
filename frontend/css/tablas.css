@@ -61,3 +61,34 @@ tr.sin-datos td {
   text-align: center;
   font-style: italic;
 }
+
+/* ===== Fetch: sesion, parametros y errores ===== */
+.barra-sesion {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.parametros-tabla {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0 0 0.75rem;
+}
+
+.parametros-tabla input { width: 6rem; }
+
+tr.error td {
+  color: #b91c1c;
+  text-align: center;
+}
+
+.form-login {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 320px;
+}
+
+.form-login label { display: grid; gap: 0.25rem; }
+.form-login .error { color: #b91c1c; min-height: 1.2em; margin: 0; }

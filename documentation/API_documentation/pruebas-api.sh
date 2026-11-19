@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
-# Pruebas de los endpoints GET/POST contra http://localhost:8081/api
+# Pruebas de la API contra http://localhost:8081/api (correr con la base vacia)
+# Cada peticion manda el token del usuario que aparece en ?idUsuario= ; si no hay, el del maestro.
 API=http://localhost:8081/api
 PASS=0; FAIL=0; BODY=""
 TMP=$(mktemp)
+declare -A TOK   # idUsuario -> token
+DEF=""           # token por defecto (maestro)
+TOKEN=""         # si se define, se usa este token en la siguiente peticion ("-" = sin token)
 
 req() { # metodo ruta body esperado descripcion
-  local m=$1 u=$2 b=$3 exp=$4 d=$5 code
+  local m=$1 u=$2 b=$3 exp=$4 d=$5 code id t
+  id=$(echo "$u" | grep -o 'idUsuario=[0-9]*' | cut -d= -f2)
+  t="$DEF"; [ -n "$id" ] && [ -n "${TOK[$id]}" ] && t="${TOK[$id]}"
+  [ -n "$TOKEN" ] && t="$TOKEN"; TOKEN=""
+  local auth=(); [ -n "$t" ] && [ "$t" != "-" ] && auth=(-H "Authorization: Bearer $t")
   if [ -n "$b" ]; then
-    code=$(curl -s -o "$TMP" -w "%{http_code}" -X "$m" "$API$u" -H "Content-Type: application/json" -d "$b")
+    code=$(curl -s -o "$TMP" -w "%{http_code}" -X "$m" "$API$u" "${auth[@]}" -H "Content-Type: application/json" -d "$b")
   else
-    code=$(curl -s -o "$TMP" -w "%{http_code}" -X "$m" "$API$u")
+    code=$(curl -s -o "$TMP" -w "%{http_code}" -X "$m" "$API$u" "${auth[@]}")
   fi
   BODY=$(cat "$TMP")
   if [ "$code" = "$exp" ]; then PASS=$((PASS+1)); printf "OK   %s %-45s %s  %s\n" "$m" "$u" "$code" "$d"
@@ -34,15 +42,33 @@ req POST /auth/registro '{"nombre":"Caro","email":"caro@uv.mx","password":"12345
 req POST /auth/registro '{"nombre":"X","email":"x@uv.mx","password":"1","rol":"ADMIN"}' 400 "no se puede registrar ADMIN"
 req POST /auth/registro '{"nombre":"X","email":"ana@uv.mx","password":"1","rol":"ALUMNO"}' 409 "email repetido"
 req POST /auth/registro '{"nombre":"X"}' 400 "faltan campos"
-req POST /auth/login '{"email":"ana@uv.mx","password":"123456"}' 200 "login correcto"; nopass
+req POST /auth/login '{"email":"ana@uv.mx","password":"123456"}' 200 "login correcto"; nopass; check "d['usuario']['idUsuario']==$A1 and d['token'].count('.')==2" "regresa usuario y token JWT"; TOK[$A1]=$(jget "['token']")
+req POST /auth/login '{"email":"juan@uv.mx","password":"123456"}' 200 "login maestro"; TOK[$M]=$(jget "['token']"); DEF=${TOK[$M]}
+req POST /auth/login '{"email":"beto@uv.mx","password":"123456"}' 200 "login alumno 2"; TOK[$A2]=$(jget "['token']")
+req POST /auth/login '{"email":"caro@uv.mx","password":"123456"}' 200 "login alumno 3"; TOK[$A3]=$(jget "['token']")
 req POST /auth/login '{"email":"ana@uv.mx","password":"mal"}' 401 "password incorrecta"
 req POST /auth/login '{"email":"nadie@uv.mx","password":"123456"}' 401 "email inexistente"
 req GET "/auth/me?idUsuario=$A1" "" 200 "mis datos"; check "d['email']=='ana@uv.mx'" "me devuelve al usuario correcto"
-req GET "/auth/me?idUsuario=999" "" 401 "usuario no valido"
+req GET "/auth/me?idUsuario=999" "" 403 "idUsuario distinto al del token"
+TOKEN=${TOK[$A1]}; req GET "/auth/me" "" 200 "me sin idUsuario (lo toma del token)"; check "d['email']=='ana@uv.mx'" "usuario del token"
+
+echo "=== TOKEN Y CORS"
+TOKEN="-"; req GET "/cursos" "" 401 "sin token"
+TOKEN="abc.def.ghi"; req GET "/cursos" "" 401 "token invalido"
+TOKEN="${TOK[$A1]%?}x"; req GET "/cursos" "" 401 "token con firma alterada"
+FALSO=$(python -c "import sys,base64,json; h,p,f=sys.argv[1].split('.'); d=json.loads(base64.urlsafe_b64decode(p+'==')); d['sub']=sys.argv[2]; q=base64.urlsafe_b64encode(json.dumps(d,separators=(',',':')).encode()).decode().rstrip('='); print(h+'.'+q+'.'+f)" "${TOK[$A1]}" "$M")
+TOKEN="$FALSO"; req GET "/cursos?idUsuario=$M" "" 401 "token con usuario cambiado (firma no coincide)"
+TOKEN=${TOK[$A1]}; req GET "/cursos?idUsuario=$M" "" 403 "alumno no puede usar el idUsuario del maestro"
+TOKEN="-"; req POST /auth/registro '{"nombre":"Libre","email":"libre@uv.mx","password":"123456","rol":"ALUMNO"}' 201 "registro no pide token"
+H=$(curl -s -o /dev/null -D - -X OPTIONS "$API/cursos" -H "Origin: http://localhost:5500" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization")
+if echo "$H" | grep -qi "access-control-allow-origin: http://localhost:5500"; then PASS=$((PASS+1)); echo "OK   check: CORS permite http://localhost:5500"; else FAIL=$((FAIL+1)); echo "FAIL check: CORS localhost -> $H"; fi
+C2=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$API/cursos" -H "Origin: http://sitio-externo.com" -H "Access-Control-Request-Method: GET")
+if [ "$C2" = "403" ]; then PASS=$((PASS+1)); echo "OK   check: CORS bloquea otros sitios"; else FAIL=$((FAIL+1)); echo "FAIL check: CORS externo -> $C2"; fi
 
 echo "=== USUARIOS (ya existentes)"
 req POST /usuarios '{"nombre":"Admin","email":"admin@uv.mx","password":"123456","rol":"ADMIN"}' 201 "crear admin"; AD=$(jget "['idUsuario']")
-req GET /usuarios "" 200 "listar usuarios"; nopass; check "len(d)==5" "5 usuarios"
+req POST /auth/login '{"email":"admin@uv.mx","password":"123456"}' 200 "login admin"; TOK[$AD]=$(jget "['token']")
+req GET /usuarios "" 200 "listar usuarios"; nopass; check "len(d)==6" "6 usuarios"
 req GET "/usuarios/$M" "" 200 "ver usuario"
 
 echo "=== CURSOS"
@@ -58,7 +84,7 @@ req POST "/cursos/unirse?idUsuario=$M" "{\"codigoInvitacion\":\"$COD\"}" 403 "ma
 req POST "/cursos/unirse?idUsuario=$A1" '{"codigoInvitacion":"ZZZZZZ"}' 404 "codigo inexistente"
 req GET "/cursos?idUsuario=$M" "" 200 "mis cursos (maestro)"; check "len(d)==1" "maestro ve 1 curso"
 req GET "/cursos?idUsuario=$A1" "" 200 "mis cursos (alumno)"; check "len(d)==1 and d[0]['idCurso']==$C" "alumno ve su curso"
-req GET "/cursos/$C/alumnos?idUsuario=$A1" "" 200 "ver alumnos"; check "len(d)==3" "3 alumnos inscritos"; nopass
+req GET "/cursos/$C/alumnos?idUsuario=$A1" "" 200 "ver alumnos"; check "len(d)==3 and d[0]['alumno']['nombre']=='Ana' and d[0]['fechaInscripcion']" "3 inscripciones con alumno y fecha"; nopass
 req GET "/cursos/$C/alumnos?idUsuario=$AD" "" 403 "no miembro no ve alumnos"
 req POST "/cursos/$C/codigo?idUsuario=$M" "" 200 "regenerar codigo"; check "d['codigoInvitacion']!='$COD'" "codigo cambio"
 req POST "/cursos/$C/codigo?idUsuario=$A1" "" 403 "alumno no regenera codigo"
@@ -82,7 +108,7 @@ echo "=== NOTIFICACIONES"
 req GET "/notificaciones?idUsuario=$A1" "" 200 "mis notificaciones"; check "len(d)==4" "4 notificaciones (una por tarea)"
 req GET "/notificaciones?idUsuario=$A1&leido=false" "" 200 "solo no leidas"; check "len(d)==4" "4 no leidas"
 req GET "/notificaciones/no-leidas/total?idUsuario=$A1" "" 200 "total no leidas"; check "d['total']==4" "total = 4"
-req GET "/notificaciones?idUsuario=999" "" 404 "usuario inexistente"
+req GET "/notificaciones?idUsuario=999" "" 403 "idUsuario ajeno a la sesion"
 
 echo "=== EQUIPOS"
 req POST "/tareas/$T2/equipos?idUsuario=$M" '{"nombreEquipo":"Equipo Rojo"}' 201 "crear equipo"; E1=$(jget "['idEquipo']")
@@ -175,14 +201,14 @@ req GET "/resultados/$R1?idUsuario=$M" "" 200 "maestro ve resultado"
 req GET "/resultados/$R1?idUsuario=$A2" "" 403 "otro alumno no ve resultado"
 
 echo "=== FILTROS"
-req GET "/usuarios?rol=alumno" "" 200 "usuarios por rol"; check "len(d)==3 and all(u['rol']=='ALUMNO' for u in d)" "3 alumnos"
+req GET "/usuarios?rol=alumno" "" 200 "usuarios por rol"; check "len(d)==4 and all(u['rol']=='ALUMNO' for u in d)" "4 alumnos"
 req GET "/usuarios?q=ANA" "" 200 "buscar usuario"; check "len(d)==1 and d[0]['email']=='ana@uv.mx'" "encuentra a Ana sin importar mayusculas"
 req GET "/usuarios?rol=JEFE" "" 400 "rol invalido"
 req GET "/cursos?q=desarrollo" "" 200 "buscar curso"; check "len(d)==1" "1 curso"
 req GET "/cursos?q=python" "" 200 "buscar curso sin resultados"; check "len(d)==0" "0 cursos"
 req GET "/cursos?idUsuario=$A1&q=web" "" 200 "mis cursos + busqueda"; check "len(d)==1" "1 curso"
 req GET "/cursos?idMaestro=$M" "" 200 "cursos de un maestro"; check "len(d)==1" "1 curso"
-req GET "/cursos/$C/alumnos?idUsuario=$M&q=beto" "" 200 "buscar alumno del curso"; check "len(d)==1 and d[0]['nombre']=='Beto'" "encuentra a Beto"
+req GET "/cursos/$C/alumnos?idUsuario=$M&q=beto" "" 200 "buscar alumno del curso"; check "len(d)==1 and d[0]['alumno']['nombre']=='Beto'" "encuentra a Beto"
 req GET "/cursos/$C/tareas?idUsuario=$M&estado=vencida" "" 200 "tareas vencidas"; check "len(d)==1 and d[0]['idTarea']==$T4" "solo la vencida"
 req GET "/cursos/$C/tareas?idUsuario=$M&estado=pendiente" "" 200 "tareas pendientes"; check "len(d)==3" "3 pendientes"
 req GET "/cursos/$C/tareas?idUsuario=$M&esEquipo=true" "" 200 "tareas por equipo"; check "len(d)==1 and d[0]['idTarea']==$T2" "solo la de equipo"

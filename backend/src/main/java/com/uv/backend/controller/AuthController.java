@@ -3,6 +3,9 @@ package com.uv.backend.controller;
 import com.uv.backend.controller.UsuarioController.UsuarioResponse;
 import com.uv.backend.entity.Usuario;
 import com.uv.backend.repository.IUsuario;
+import com.uv.backend.security.AuthInterceptor;
+import com.uv.backend.security.TokenService;
+import com.uv.backend.security.TokenService.DatosToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +21,11 @@ public class AuthController {
     private static final Set<String> ROLES_REGISTRO = Set.of("MAESTRO", "ALUMNO");
 
     private final IUsuario iUsuario;
+    private final TokenService tokenService;
 
-    public AuthController(IUsuario iUsuario) {
+    public AuthController(IUsuario iUsuario, TokenService tokenService) {
         this.iUsuario = iUsuario;
+        this.tokenService = tokenService;
     }
 
     public record RegistroRequest(String nombre, String email, String password, String rol) {}
@@ -44,8 +49,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.de(iUsuario.save(u)));
     }
 
+    // Respuesta del login: el token y los datos del usuario
+    public record LoginResponse(String token, UsuarioResponse usuario) {}
+
     // Iniciar sesion (POST /auth/login)
-    // Por ahora devuelve los datos del usuario; el token JWT queda pendiente
+    // Devuelve un token JWT que el frontend manda en el header Authorization: Bearer <token>
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
         if (vacio(req.email()) || vacio(req.password())) {
@@ -55,12 +63,20 @@ public class AuthController {
         if (opt.isEmpty() || !opt.get().getPasswordHash().equals(UsuarioController.sha256(req.password()))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Email o password incorrectos");
         }
-        return ResponseEntity.ok(UsuarioResponse.de(opt.get()));
+        Usuario u = opt.get();
+        return ResponseEntity.ok(new LoginResponse(tokenService.generar(u), UsuarioResponse.de(u)));
     }
 
-    // Ver mis datos (GET /auth/me?idUsuario=)
+    // Ver mis datos (GET /auth/me). Toma el usuario del token; ?idUsuario= es opcional
     @GetMapping("/me")
-    public ResponseEntity<?> me(@RequestParam Integer idUsuario) {
+    public ResponseEntity<?> me(@RequestParam(required = false) Integer idUsuario,
+            @RequestAttribute(name = AuthInterceptor.ATRIBUTO, required = false) DatosToken sesion) {
+        if (idUsuario == null && sesion != null) {
+            idUsuario = sesion.idUsuario();
+        }
+        if (idUsuario == null) {
+            return ResponseEntity.badRequest().body("idUsuario es obligatorio");
+        }
         return iUsuario.findById(idUsuario)
                 .<ResponseEntity<?>>map(u -> ResponseEntity.ok(UsuarioResponse.de(u)))
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no valido"));

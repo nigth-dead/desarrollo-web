@@ -3,42 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tabla de Prórrogas - LMS</title>
+  <title>Tabla de Entregas - LMS</title>
   <link rel="stylesheet" href="../css/tablas.css">
 </head>
 <body>
   <header>
     <a href="../index.html">&larr; Todas las tablas</a>
-    <h1>Tabla de Prórrogas</h1>
-    <p class="endpoint">GET <code>/api/tareas/{idTarea}/prorrogas</code></p>
-    <p class="nota">Prórrogas de una tarea. {idTarea} es el id de la tarea. El filtro ?aprobada=false muestra las pendientes de revisar.</p>
+    <h1>Tabla de Entregas</h1>
+    <p class="endpoint">GET <code>/api/tareas/{idTarea}/entregas</code></p>
+    <p class="nota">Entregas de una tarea. {idTarea} es el id de la tarea.</p>
     <p class="nota">Las filas se cargarán con Fetch. Esta página solo construye la tabla.</p>
   </header>
   <main>
     <div class="tabla-contenedor">
-      <table data-endpoint="/api/tareas/{idTarea}/prorrogas" data-recurso="prórrogas">
+      <table data-endpoint="/api/tareas/{idTarea}/entregas" data-recurso="entregas">
         <thead>
           <tr>
-            <th data-campo="idProrroga">ID</th>
+            <th data-campo="idEntrega">ID</th>
             <th data-campo="tarea.titulo">Tarea</th>
             <th data-campo="tarea.idTarea">ID tarea</th>
             <th data-campo="alumno.nombre">Alumno</th>
-            <th data-campo="alumno.idAlumno">ID alumno</th>
+            <th data-campo="alumno.idUsuario">ID alumno</th>
             <th data-campo="equipo.nombreEquipo">Equipo</th>
             <th data-campo="equipo.idEquipo">ID equipo</th>
-            <th data-campo="nuevaFechaLimite">Nueva fecha límite</th>
-            <th data-campo="aprobada">Aprobada</th>
+            <th data-campo="archivoUrl">Archivo</th>
+            <th data-campo="fechaEntrega">Fecha de entrega</th>
+            <th data-campo="calificacion">Calificación</th>
+            <th data-campo="comentarioMaestro">Comentario del maestro</th>
           </tr>
         </thead>
-        <tbody id="tabla-prorrogas-cuerpo">
+        <tbody id="tabla-entregas-cuerpo">
           <!-- Las filas se llenan con Fetch (tarea de Luis). No se agrega lógica aquí. -->
           <tr class="sin-datos">
-            <td colspan="9">Sin registros todavía.</td>
+            <td colspan="11">Sin registros todavía.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
   </main>
+  <script src="../js/api.js"></script>
+  <script src="../js/tablas.js"></script>
 </body>
 </html>
