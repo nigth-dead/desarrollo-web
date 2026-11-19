@@ -23,7 +23,7 @@
             <th data-campo="examen.titulo">Examen</th>
             <th data-campo="examen.idExamen">ID examen</th>
             <th data-campo="alumno.nombre">Alumno</th>
-            <th data-campo="alumno.idAlumno">ID alumno</th>
+            <th data-campo="alumno.idUsuario">ID alumno</th>
             <th data-campo="calificacionFinal">Calificación final</th>
             <th data-campo="estadoRevision">Estado de revisión</th>
             <th data-campo="fechaRealizacion">Fecha de realización</th>
@@ -42,7 +42,7 @@
     <p class="endpoint">GET <code>/api/resultados/{id}</code> (detalle, campo <code>respuestas</code>)</p>
     <p class="nota">No hay un endpoint GET que liste respuestas por sí solas; esta tabla se llena con el campo <code>respuestas</code> del detalle del resultado.</p>
     <div class="tabla-contenedor">
-      <table data-endpoint="/api/resultados/{id}" data-recurso="respuestas de un resultado">
+      <table data-endpoint="/api/resultados/{id}" data-lista="respuestas" data-recurso="respuestas de un resultado">
         <thead>
           <tr>
             <th data-campo="idRespuesta">ID</th>
@@ -65,5 +65,7 @@
     </div>
 
   </main>
+  <script src="../js/api.js"></script>
+  <script src="../js/tablas.js"></script>
 </body>
 </html>

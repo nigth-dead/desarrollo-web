@@ -120,9 +120,9 @@ public class CursoController {
         if (!accesoCurso.esMiembro(opt.get(), idUsuario)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
         }
-        return ResponseEntity.ok(cursoAlumnoRepository.findByCursoIdCurso(id)
-                .stream().map(CursoAlumno::getAlumno)
-                .filter(a -> Filtros.contiene(q, a.getNombre(), a.getEmail()))
+        // se regresa la inscripcion (alumno + fechaInscripcion), no solo el alumno
+        return ResponseEntity.ok(cursoAlumnoRepository.findByCursoIdCurso(id).stream()
+                .filter(ca -> Filtros.contiene(q, ca.getAlumno().getNombre(), ca.getAlumno().getEmail()))
                 .toList());
     }
 
