@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabla de Resultados de examen - LMS</title>
+  <link rel="stylesheet" href="../css/tablas.css">
+</head>
+<body>
+  <header>
+    <a href="../index.html">&larr; Todas las tablas</a>
+    <h1>Tabla de Resultados de examen</h1>
+    <p class="endpoint">GET <code>/api/examenes/{idExamen}/resultados</code></p>
+    <p class="nota">Resultados de un examen. {idExamen} es el id del examen. Las respuestas de cada resultado van en la segunda tabla de esta página.</p>
+    <p class="nota">Las filas se cargarán con Fetch. Esta página solo construye la tabla.</p>
+  </header>
+  <main>
+    <div class="tabla-contenedor">
+      <table data-endpoint="/api/examenes/{idExamen}/resultados" data-recurso="resultados de examen">
+        <thead>
+          <tr>
+            <th data-campo="idResultado">ID</th>
+            <th data-campo="examen.titulo">Examen</th>
+            <th data-campo="examen.idExamen">ID examen</th>
+            <th data-campo="alumno.nombre">Alumno</th>
+            <th data-campo="alumno.idAlumno">ID alumno</th>
+            <th data-campo="calificacionFinal">Calificación final</th>
+            <th data-campo="estadoRevision">Estado de revisión</th>
+            <th data-campo="fechaRealizacion">Fecha de realización</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-resultados-cuerpo">
+          <!-- Las filas se llenan con Fetch (tarea de Luis). No se agrega lógica aquí. -->
+          <tr class="sin-datos">
+            <td colspan="8">Sin registros todavía.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="respuestas">Respuestas de un resultado</h2>
+    <p class="endpoint">GET <code>/api/resultados/{id}</code> (detalle, campo <code>respuestas</code>)</p>
+    <p class="nota">No hay un endpoint GET que liste respuestas por sí solas; esta tabla se llena con el campo <code>respuestas</code> del detalle del resultado.</p>
+    <div class="tabla-contenedor">
+      <table data-endpoint="/api/resultados/{id}" data-recurso="respuestas de un resultado">
+        <thead>
+          <tr>
+            <th data-campo="idRespuesta">ID</th>
+            <th data-campo="resultado.idResultado">Resultado</th>
+            <th data-campo="resultado.idResultado">ID resultado</th>
+            <th data-campo="pregunta.pregunta">Pregunta</th>
+            <th data-campo="pregunta.idPregunta">ID pregunta</th>
+            <th data-campo="respuestaDada">Respuesta dada</th>
+            <th data-campo="puntajeObtenido">Puntaje obtenido</th>
+            <th data-campo="comentarioMaestro">Comentario del maestro</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-respuestas-cuerpo">
+          <!-- Las filas se llenan con Fetch (tarea de Luis). No se agrega lógica aquí. -->
+          <tr class="sin-datos">
+            <td colspan="8">Sin registros todavía.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</body>
+</html>

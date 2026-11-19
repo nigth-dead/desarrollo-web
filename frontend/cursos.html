@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabla de Cursos - LMS</title>
+  <link rel="stylesheet" href="../css/tablas.css">
+</head>
+<body>
+  <header>
+    <a href="../index.html">&larr; Todas las tablas</a>
+    <h1>Tabla de Cursos</h1>
+    <p class="endpoint">GET <code>/api/cursos</code></p>
+    <p class="nota">Lista de cursos. El maestro llega como objeto anidado (maestro.nombre).</p>
+    <p class="nota">Las filas se cargarán con Fetch. Esta página solo construye la tabla.</p>
+  </header>
+  <main>
+    <div class="tabla-contenedor">
+      <table data-endpoint="/api/cursos" data-recurso="cursos">
+        <thead>
+          <tr>
+            <th data-campo="idCurso">ID</th>
+            <th data-campo="nombre">Nombre</th>
+            <th data-campo="descripcion">Descripción</th>
+            <th data-campo="codigoInvitacion">Código de invitación</th>
+            <th data-campo="maestro.nombre">Maestro</th>
+            <th data-campo="maestro.idUsuario">ID maestro</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-cursos-cuerpo">
+          <!-- Las filas se llenan con Fetch (tarea de Luis). No se agrega lógica aquí. -->
+          <tr class="sin-datos">
+            <td colspan="6">Sin registros todavía.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</body>
+</html>

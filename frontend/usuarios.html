@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabla de Usuarios - LMS</title>
+  <link rel="stylesheet" href="../css/tablas.css">
+</head>
+<body>
+  <header>
+    <a href="../index.html">&larr; Todas las tablas</a>
+    <h1>Tabla de Usuarios</h1>
+    <p class="endpoint">GET <code>/api/usuarios</code></p>
+    <p class="nota">Lista de usuarios. La contraseña nunca se muestra: passwordHash lleva @JsonIgnore en Usuario.java.</p>
+    <p class="nota">Las filas se cargarán con Fetch. Esta página solo construye la tabla.</p>
+  </header>
+  <main>
+    <div class="tabla-contenedor">
+      <table data-endpoint="/api/usuarios" data-recurso="usuarios">
+        <thead>
+          <tr>
+            <th data-campo="idUsuario">ID</th>
+            <th data-campo="nombre">Nombre</th>
+            <th data-campo="email">Email</th>
+            <th data-campo="rol">Rol</th>
+            <th data-campo="fechaRegistro">Fecha de registro</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-usuarios-cuerpo">
+          <!-- Las filas se llenan con Fetch (tarea de Luis). No se agrega lógica aquí. -->
+          <tr class="sin-datos">
+            <td colspan="5">Sin registros todavía.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</body>
+</html>

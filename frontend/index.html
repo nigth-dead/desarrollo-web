@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tablas - LMS (Entregable 4)</title>
+  <link rel="stylesheet" href="css/tablas.css">
+</head>
+<body>
+  <header>
+    <h1>Tablas del LMS</h1>
+    <p class="nota">Entregable 4 - Desarrollo frontend. Solo construcción de tablas.</p>
+    <p class="nota">Cada tabla muestra las columnas de su recurso y el endpoint GET que la alimenta. Las filas se cargarán con Fetch; los formularios, la integración con el backend y los mensajes de error o confirmación son tareas de otros integrantes.</p>
+  </header>
+  <main>
+    <div class="tabla-contenedor">
+      <table>
+        <thead>
+          <tr>
+            <th>Tabla</th>
+            <th>Endpoint GET</th>
+            <th>Columnas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="tablas/usuarios.html">Usuarios</a></td><td><code>/api/usuarios</code></td><td>5 columnas</td></tr>
+          <tr><td><a href="tablas/cursos.html">Cursos</a></td><td><code>/api/cursos</code></td><td>6 columnas</td></tr>
+          <tr><td><a href="tablas/alumnos-curso.html">Alumnos de un curso</a></td><td><code>/api/cursos/{id}/alumnos</code></td><td>5 columnas</td></tr>
+          <tr><td><a href="tablas/tareas.html">Tareas</a></td><td><code>/api/cursos/{idCurso}/tareas</code></td><td>8 columnas</td></tr>
+          <tr><td><a href="tablas/equipos.html">Equipos</a></td><td><code>/api/tareas/{idTarea}/equipos</code></td><td>5 columnas</td></tr>
+          <tr><td><a href="tablas/entregas.html">Entregas</a></td><td><code>/api/tareas/{idTarea}/entregas</code></td><td>11 columnas</td></tr>
+          <tr><td><a href="tablas/prorrogas.html">Prórrogas</a></td><td><code>/api/tareas/{idTarea}/prorrogas</code></td><td>9 columnas</td></tr>
+          <tr><td><a href="tablas/foros.html">Foros</a></td><td><code>/api/cursos/{idCurso}/foros</code></td><td>6 columnas</td></tr>
+          <tr><td><a href="tablas/comentarios.html">Comentarios de foro</a></td><td><code>/api/foros/{idForo}/comentarios</code></td><td>7 columnas</td></tr>
+          <tr><td><a href="tablas/examenes.html">Exámenes</a></td><td><code>/api/cursos/{idCurso}/examenes</code></td><td>6 columnas</td></tr>
+          <tr><td><a href="tablas/preguntas.html">Preguntas de examen</a></td><td><code>/api/examenes/{idExamen}/preguntas</code></td><td>8 columnas</td></tr>
+          <tr><td><a href="tablas/resultados.html">Resultados de examen</a></td><td><code>/api/examenes/{idExamen}/resultados</code></td><td>8 columnas</td></tr>
+          <tr><td><a href="tablas/notificaciones.html">Notificaciones</a></td><td><code>/api/notificaciones</code></td><td>6 columnas</td></tr>
+          <tr><td><a href="tablas/resultados.html#respuestas">Respuestas de un resultado</a></td><td><code>/api/resultados/{id}</code> (campo <code>respuestas</code>)</td><td>8 columnas</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
