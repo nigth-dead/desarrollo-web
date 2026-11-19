@@ -44,6 +44,9 @@ public class CursoController {
     // Datos que llegan en el POST
     public record CursoRequest(String nombre, String descripcion, Integer idMaestro) {}
 
+    // Datos que llegan en el POST /cursos/{id}/alumnos
+    public record InscribirRequest(String email) {}
+
     // Ver cursos (GET /cursos). Con ?idUsuario= devuelve solo "mis cursos":
     // MAESTRO -> los que imparte, ALUMNO -> en los que esta inscrito, ADMIN -> todos
     // Filtros: ?q= (nombre o descripcion), ?idMaestro=
@@ -124,6 +127,35 @@ public class CursoController {
         return ResponseEntity.ok(cursoAlumnoRepository.findByCursoIdCurso(id).stream()
                 .filter(ca -> Filtros.contiene(q, ca.getAlumno().getNombre(), ca.getAlumno().getEmail()))
                 .toList());
+    }
+
+    // Inscribir alumno por correo (POST /cursos/{id}/alumnos?idUsuario=)
+    // Solo el maestro del curso. El alumno ya debe tener cuenta registrada.
+    @PostMapping("/{id}/alumnos")
+    public ResponseEntity<?> inscribirAlumno(@PathVariable Integer id, @RequestBody InscribirRequest req,
+            @RequestParam Integer idUsuario) {
+        Optional<Curso> opt = iCurso.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El curso no existe");
+        }
+        if (!accesoCurso.esMaestro(opt.get(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede inscribir alumnos");
+        }
+        if (req.email() == null || req.email().isBlank()) {
+            return ResponseEntity.badRequest().body("email es obligatorio");
+        }
+        Optional<Usuario> alumno = iUsuario.findByEmail(req.email().trim());
+        if (alumno.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No existe una cuenta con ese correo.");
+        }
+        if (!"ALUMNO".equals(alumno.get().getRol())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("La cuenta no es de un alumno.");
+        }
+        if (cursoAlumnoRepository.existsById(new CursoAlumnoId(id, alumno.get().getIdUsuario()))) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("El alumno ya está inscrito en este curso");
+        }
+        CursoAlumno guardado = cursoAlumnoRepository.save(new CursoAlumno(opt.get(), alumno.get()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
     @GetMapping("/{id}")

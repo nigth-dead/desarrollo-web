@@ -9,6 +9,7 @@ import com.uv.backend.entity.Notificacion;
 import com.uv.backend.repository.INotificacion;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import com.uv.backend.entity.Equipo;
@@ -75,11 +76,6 @@ public class EntregaController {
             if (entregaNueva.getArchivoUrl() != null) {
                 entregaBase.setArchivoUrl(entregaNueva.getArchivoUrl());
                 entregaBase.setFechaEntrega(LocalDateTime.now());
-            }
-            if (entregaNueva.getDescripcion() != null) {
-                entregaBase.setDescripcion(entregaNueva.getDescripcion());
-            }
-            if (entregaNueva.getArchivoUrl() != null || entregaNueva.getDescripcion() != null) {
                 iEntrega.save(entregaBase);
                 return entregaBase;
             }
@@ -101,6 +97,29 @@ public class EntregaController {
         return null;
     }
 
+    // Eliminar entrega (DELETE /entregas/{id}?idUsuario=)
+    // Solo quien la hizo o su equipo, y solo si la tarea sigue abierta.
+    @DeleteMapping("/entregas/{id}")
+    public ResponseEntity<?> eliminarEntrega(@PathVariable Integer id, @RequestParam Integer idUsuario) {
+        Optional<Entrega> opt = iEntrega.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
+        }
+        Entrega entrega = opt.get();
+        if (!esDuenoOIntegrante(entrega, idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
+        }
+        Tarea tarea = entrega.getTarea();
+        if (tarea != null) {
+            LocalDateTime limite = fechaLimiteDe(tarea, idUsuario, entrega.getEquipo());
+            if (limite != null && LocalDateTime.now().isAfter(limite)) {
+                return ResponseEntity.badRequest().body("La fecha limite ya paso");
+            }
+        }
+        iEntrega.delete(entrega);
+        return ResponseEntity.ok("Entrega eliminada");
+    }
+
     // ===== GET y POST =====
 
     @Autowired
@@ -112,7 +131,7 @@ public class EntregaController {
     @Autowired
     AccesoCurso accesoCurso;
 
-    public record EntregaRequest(String archivoUrl, String descripcion) {}
+    public record EntregaRequest(String archivoUrl) {}
 
     //busca el equipo del alumno dentro de una tarea por equipos
     private Optional<Equipo> equipoDelAlumno(Tarea tarea, Integer idAlumno) {
@@ -221,7 +240,6 @@ public class EntregaController {
         }
         //individual: se llena id_alumno; por equipo: se llena id_equipo
         Entrega entrega = new Entrega(tarea, equipo == null ? alumno : null, equipo, req.archivoUrl());
-        entrega.setDescripcion(req.descripcion());
         entrega.setFechaEntrega(LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(iEntrega.save(entrega));
     }
