@@ -1,0 +1,62 @@
+h1 {
+    margin: 0 0 8px 0;
+    font-size: 26px;
+}
+
+.codigo-invitacion {
+    margin: 4px 0;
+}
+
+.codigo-invitacion .codigo {
+    font-weight: 700;
+    color: #93c5fd;
+    background-color: #1e3a8a;
+    border-radius: 8px;
+    padding: 2px 8px;
+}
+
+.tarjeta .acciones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.comentarios {
+    list-style: none;
+    margin: 12px 0;
+    padding: 0;
+}
+
+.comentarios li {
+    background-color: var(--card2);
+    border-left: 3px solid var(--input-line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.comentarios li small {
+    display: block;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.form-comentario {
+    margin-top: 12px;
+}
+
+.form-comentario .acciones-form {
+    margin-top: 10px;
+}
+
+.fila-integrante {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.fila-integrante select {
+    flex: 1;
+}

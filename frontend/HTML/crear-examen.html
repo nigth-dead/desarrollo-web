@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear examen · LMS Desarrollo Web</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/crear-examen.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform">
+        <form id="formExamen">
+            <section class="apartado">
+                <h1 id="tituloExamen">Crear examen</h1>
+
+
+                <p class="nota">Curso: <strong id="nombreCurso"></strong></p>
+
+                <label for="examenTitulo">Título del examen</label>
+                <input type="text" id="examenTitulo" name="titulo" placeholder="Ej. Examen Parcial 1" required>
+
+                <div class="fila-doble">
+                    <div>
+                        <label for="examenInicio">Fecha de inicio</label>
+                        <input type="datetime-local" id="examenInicio" name="fecha_inicio" required>
+                    </div>
+                    <div>
+                        <label for="examenFin">Fecha de fin</label>
+                        <input type="datetime-local" id="examenFin" name="fecha_fin" required>
+                    </div>
+                </div>
+            </section>
+
+            <section class="apartado">
+                <div class="apartado-encabezado">
+                    <h2>Preguntas</h2>
+                </div>
+                <div id="contenedorPreguntas"></div>
+                <button type="button" class="btn-add" id="btnAddPregunta">Añadir pregunta</button>
+            </section>
+
+            <div class="acciones-form">
+                <a class="btn btn-secundario" id="btnCancelarExamen" href="cursos.html">Cancelar</a>
+                <button type="submit" class="btn btn-primario" id="btnGuardarExamen">Guardar examen</button>
+            </div>
+        </form>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/crear-examen.js"></script>
+</body>
+</html>

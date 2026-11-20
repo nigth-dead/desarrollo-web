@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responder examen</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/responder-examen.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform">
+        <a class="volver" id="enlaceVolver" href="cursos.html">&larr; Volver a Mis cursos</a>
+
+        <section class="apartado encabezado-examen" id="encabezadoExamen">
+            <h1 id="tituloExamen">Responder examen</h1>
+            <p><strong>Curso:</strong> <span id="nombreCurso"></span></p>
+            <p><strong>Fecha límite:</strong> <span id="fechaLimite"></span></p>
+            <p class="tiempo">Tiempo restante: <span id="tiempoRestante">90:00</span></p>
+            <p id="progreso">Respondidas 0 de 0</p>
+        </section>
+
+        <div id="resultadoExamen" hidden></div>
+
+        <form id="formResponder">
+            <div id="contenedorPreguntas"></div>
+            <div class="acciones-form">
+                <button type="submit" class="btn btn-primario">Enviar respuestas</button>
+            </div>
+        </form>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/responder-examen.js"></script>
+</body>
+</html>

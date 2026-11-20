@@ -126,11 +126,9 @@ public class ProrrogaController {
     @Autowired
     AccesoCurso accesoCurso;
 
-    //idAlumno / idEquipo solo los usa el maestro para otorgar una prorroga directa
-    public record ProrrogaRequest(LocalDateTime nuevaFechaLimite, Integer idAlumno, Integer idEquipo) {}
+    public record ProrrogaRequest(LocalDateTime nuevaFechaLimite, Integer idAlumno, Integer idEquipo, String justificacion) {}
 
-    //ver solicitudes de prorroga (maestro)
-    //filtro: ?aprobada=true|false (false = pendientes de revisar)
+    //ver solicitudes de prorroga
     @GetMapping ("/tareas/{idTarea}/prorrogas")
     public ResponseEntity<?> listarProrrogas(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
             @RequestParam(required = false) Boolean aprobada) {
@@ -138,10 +136,12 @@ public class ProrrogaController {
         if (tarea.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
         }
-        if (!accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede ver las prorrogas");
+        boolean esMaestro = accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario);
+        if (!esMaestro && !accesoCurso.esAlumnoInscrito(tarea.get().getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
         }
         return ResponseEntity.ok(iProrroga.findByTareaIdTarea(idTarea).stream()
+                .filter(p -> esMaestro || esSolicitante(p, idUsuario))
                 .filter(p -> aprobada == null || aprobada.equals(Boolean.TRUE.equals(p.getAprobada())))
                 .toList());
     }
@@ -180,6 +180,7 @@ public class ProrrogaController {
                 alumno = iUsuario.findById(req.idAlumno()).get();
             }
             Prorroga p = new Prorroga(tarea, alumno, equipo, req.nuevaFechaLimite());
+            p.setJustificacion(req.justificacion() == null ? null : req.justificacion().trim());
             p.setAprobada(true);
             return ResponseEntity.status(HttpStatus.CREATED).body(iProrroga.save(p));
         }
@@ -187,6 +188,9 @@ public class ProrrogaController {
         //alumno: solicita para si mismo o para su equipo (queda pendiente)
         if (!accesoCurso.esAlumnoInscrito(tarea.getCurso(), idUsuario)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        if (req.justificacion() == null || req.justificacion().isBlank()) {
+            return ResponseEntity.badRequest().body("justificacion es obligatoria");
         }
         Usuario alumno = null;
         Equipo equipo = null;
@@ -202,7 +206,7 @@ public class ProrrogaController {
             alumno = iUsuario.findById(idUsuario).get();
         }
         Prorroga p = new Prorroga(tarea, alumno, equipo, req.nuevaFechaLimite());
-        p.setAprobada(false);
+        p.setJustificacion(req.justificacion().trim());
         return ResponseEntity.status(HttpStatus.CREATED).body(iProrroga.save(p));
     }
 }

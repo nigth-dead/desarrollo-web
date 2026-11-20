@@ -2,7 +2,9 @@ package com.uv.backend.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -22,8 +24,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.uv.backend.entity.ExamenResultado;
 import com.uv.backend.entity.PreguntaExamen;
+import com.uv.backend.entity.RespuestaAlumno;
+import com.uv.backend.repository.IExamenResultado;
 import com.uv.backend.repository.IPreguntaExamen;
+import com.uv.backend.repository.IRespuestaAlumno;
 import com.uv.backend.repository.IUsuario;
 
 @RestController 
@@ -33,6 +39,10 @@ public class PreguntaExamenController {
     IPreguntaExamen iPreguntaExamen;
     @Autowired
     IUsuario iUsuario;
+    @Autowired
+    IRespuestaAlumno iRespuestaAlumno;
+    @Autowired
+    IExamenResultado iExamenResultado;
 
     //metodo para validar permisos de modificacion
     private boolean tienePermiso(PreguntaExamen pregunta, Integer idUsuario) {
@@ -54,6 +64,9 @@ public class PreguntaExamenController {
         if (!tienePermiso(preguntaBase, idUsuario)) {
             return null;
         }
+        String tipoAntes = preguntaBase.getTipo();
+        String correctaAntes = preguntaBase.getRespuestaCorrecta();
+        BigDecimal puntosAntes = preguntaBase.getValorPuntos();
         if (preguntaNueva.getPregunta() != null) {
             preguntaBase.setPregunta(preguntaNueva.getPregunta());
         }
@@ -70,7 +83,62 @@ public class PreguntaExamenController {
             preguntaBase.setValorPuntos(preguntaNueva.getValorPuntos());
         }
         iPreguntaExamen.save(preguntaBase);
+        recalificarRespuestas(preguntaBase, tipoAntes, correctaAntes, puntosAntes);
         return preguntaBase;
+    }
+
+    // Al editar la respuesta correcta los examenes se vuelven a calificar
+    private void recalificarRespuestas(PreguntaExamen pregunta, String tipoAntes,
+            String correctaAntes, BigDecimal puntosAntes) {
+        boolean esMultiple = "OPCION_MULTIPLE".equals(pregunta.getTipo());
+        boolean eraMultiple = "OPCION_MULTIPLE".equals(tipoAntes);
+        if (!esMultiple && !eraMultiple) {
+            return;
+        }
+        Set<Integer> resultados = new HashSet<>();
+        if (!esMultiple && eraMultiple) {
+            for (RespuestaAlumno ra : iRespuestaAlumno.findByPreguntaIdPregunta(pregunta.getIdPregunta())) {
+                ra.setPuntajeObtenido(null);
+                iRespuestaAlumno.save(ra);
+                if (ra.getResultado() != null) resultados.add(ra.getResultado().getIdResultado());
+            }
+            for (Integer idResultado : resultados) {
+                ExamenResultado resultado = iExamenResultado.findById(idResultado).orElse(null);
+                if (resultado == null) continue;
+                resultado.setEstadoRevision("PENDIENTE_MANUAL");
+                resultado.setCalificacionFinal(null);
+                iExamenResultado.save(resultado);
+            }
+            return;
+        }
+        boolean cambioCorrecta = !Objects.equals(pregunta.getRespuestaCorrecta(), correctaAntes);
+        boolean cambioPuntos = !Objects.equals(pregunta.getValorPuntos(), puntosAntes);
+        if (!cambioCorrecta && !cambioPuntos && eraMultiple) {
+            return;
+        }
+        for (RespuestaAlumno ra : iRespuestaAlumno.findByPreguntaIdPregunta(pregunta.getIdPregunta())) {
+            boolean correcta = ra.getRespuestaDada() != null && pregunta.getRespuestaCorrecta() != null
+                    && ra.getRespuestaDada().trim().equalsIgnoreCase(pregunta.getRespuestaCorrecta().trim());
+            BigDecimal puntos = correcta
+                    ? (pregunta.getValorPuntos() == null ? BigDecimal.ZERO : pregunta.getValorPuntos())
+                    : BigDecimal.ZERO;
+            ra.setPuntajeObtenido(puntos);
+            iRespuestaAlumno.save(ra);
+            if (ra.getResultado() != null) resultados.add(ra.getResultado().getIdResultado());
+        }
+        for (Integer idResultado : resultados) {
+            List<RespuestaAlumno> respuestas = iRespuestaAlumno.findByResultadoIdResultado(idResultado);
+            boolean todasCalificadas = respuestas.stream().allMatch(r -> r.getPuntajeObtenido() != null);
+            if (!todasCalificadas) continue;
+            BigDecimal total = respuestas.stream()
+                    .map(RespuestaAlumno::getPuntajeObtenido)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            ExamenResultado resultado = iExamenResultado.findById(idResultado).orElse(null);
+            if (resultado == null) continue;
+            resultado.setCalificacionFinal(total);
+            resultado.setEstadoRevision("CALIFICADO");
+            iExamenResultado.save(resultado);
+        }
     }
 
     //eliminar pregunta

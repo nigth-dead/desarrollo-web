@@ -86,8 +86,12 @@
     }
     let body;
     if (opciones.body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-      body = JSON.stringify(opciones.body);
+      if (opciones.body instanceof FormData) {
+        body = opciones.body;
+      } else {
+        headers['Content-Type'] = 'application/json';
+        body = JSON.stringify(opciones.body);
+      }
     }
 
     let respuesta;

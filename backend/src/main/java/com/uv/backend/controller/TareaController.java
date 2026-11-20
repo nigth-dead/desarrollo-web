@@ -59,6 +59,14 @@ public class TareaController {
         if (!tienePermiso(tareaBase, idUsuario)) {
             return null;
         }
+        // La fecha límite no puede ser anterior a la programada
+        LocalDateTime programada = tareaNueva.getFechaProgramada() != null
+                ? tareaNueva.getFechaProgramada() : tareaBase.getFechaProgramada();
+        LocalDateTime limite = tareaNueva.getFechaLimite() != null
+                ? tareaNueva.getFechaLimite() : tareaBase.getFechaLimite();
+        if (programada != null && limite != null && limite.isBefore(programada)) {
+            return null;
+        }
 
         //reemplazar contenido de la tarea
         if(tareaNueva.getTitulo() != null){

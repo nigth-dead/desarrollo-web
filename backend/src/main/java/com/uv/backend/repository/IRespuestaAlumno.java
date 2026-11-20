@@ -16,4 +16,12 @@ public interface IRespuestaAlumno extends CrudRepository<RespuestaAlumno, Intege
      * @return respuestas del resultado
      */
     List<RespuestaAlumno> findByResultadoIdResultado(Integer idResultado);
+
+    /**
+     * Lista las respuestas dadas a una pregunta.
+     *
+     * @param idPregunta identificador de la pregunta
+     * @return respuestas a la pregunta
+     */
+    List<RespuestaAlumno> findByPreguntaIdPregunta(Integer idPregunta);
 }

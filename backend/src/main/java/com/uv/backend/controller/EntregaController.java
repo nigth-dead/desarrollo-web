@@ -1,13 +1,19 @@
 package com.uv.backend.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.web.bind.annotation.PatchMapping;
 import com.uv.backend.entity.Notificacion;
 import com.uv.backend.repository.INotificacion;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +35,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.uv.backend.entity.Entrega;
 import com.uv.backend.repository.IEntrega;
@@ -63,7 +72,41 @@ public class EntregaController {
                 entrega.getTarea().getCurso().getMaestro().getIdUsuario().equals(idUsuario);
     }
 
-    @PutMapping ("/entregas/{id}")
+    // Carpeta donde se guardan los archivos subidos
+    private static final String CARPETA_SUBIDAS = "uploads";
+
+    // ¿Es un enlace valido (http:// o https:// con dominio)?
+    private boolean esEnlaceValido(String url) {
+        if (url == null) return false;
+        String u = url.trim();
+        if (!u.startsWith("http://") && !u.startsWith("https://")) return false;
+        try {
+            URI uri = URI.create(u);
+            return uri.getHost() != null && !uri.getHost().isBlank();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Guarda el archivo subido en la carpeta de subidas y devuelve la URL
+    private String guardarArchivo(MultipartFile archivo, HttpServletRequest request) throws IOException {
+        String original = archivo.getOriginalFilename();
+        if (original == null || original.isBlank()) original = "archivo";
+        String nombre = original.replace('\\', '/');
+        nombre = nombre.substring(nombre.lastIndexOf('/') + 1).replaceAll("[^A-Za-z0-9._-]", "_");
+        if (nombre.isBlank()) nombre = "archivo";
+        String guardado = UUID.randomUUID().toString().substring(0, 8) + "_" + nombre;
+        Path carpeta = Paths.get(CARPETA_SUBIDAS);
+        Files.createDirectories(carpeta);
+        Files.copy(archivo.getInputStream(), carpeta.resolve(guardado));
+        String host = request.getHeader("Host");
+        String base = host != null && !host.isBlank()
+                ? request.getScheme() + "://" + host
+                : request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+        return base + "/uploads/" + guardado;
+    }
+
+    @PutMapping (value = "/entregas/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Entrega reemplazarEntrega(@PathVariable Integer id, 
         @RequestParam Integer idUsuario,
         @RequestBody Entrega entregaNueva){
@@ -74,8 +117,16 @@ public class EntregaController {
 
         if (esDuenoOIntegrante(entregaBase, idUsuario)) {
             if (entregaNueva.getArchivoUrl() != null) {
+                if (!esEnlaceValido(entregaNueva.getArchivoUrl())) {
+                    return null;
+                }
                 entregaBase.setArchivoUrl(entregaNueva.getArchivoUrl());
                 entregaBase.setFechaEntrega(LocalDateTime.now());
+            }
+            if (entregaNueva.getDescripcion() != null) {
+                entregaBase.setDescripcion(entregaNueva.getDescripcion());
+            }
+            if (entregaNueva.getArchivoUrl() != null || entregaNueva.getDescripcion() != null) {
                 iEntrega.save(entregaBase);
                 return entregaBase;
             }
@@ -95,6 +146,42 @@ public class EntregaController {
             }
         }
         return null;
+    }
+
+    // Reemplazar la entrega subiendo un archivo nuevo
+    @PutMapping (value = "/entregas/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> reemplazarEntregaArchivo(@PathVariable Integer id,
+            @RequestParam Integer idUsuario,
+            @RequestParam(value = "archivo", required = false) MultipartFile archivo,
+            @RequestParam(value = "archivoUrl", required = false) String archivoUrl,
+            @RequestParam(value = "descripcion", required = false) String descripcion,
+            HttpServletRequest request) {
+        if (!iEntrega.existsById(id) || !iUsuario.existsById(idUsuario)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
+        }
+        Entrega entregaBase = iEntrega.findById(id).get();
+        if (!esDuenoOIntegrante(entregaBase, idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
+        }
+        boolean hayArchivo = archivo != null && !archivo.isEmpty();
+        if (hayArchivo) {
+            try {
+                entregaBase.setArchivoUrl(guardarArchivo(archivo, request));
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("No se pudo guardar el archivo");
+            }
+            entregaBase.setFechaEntrega(LocalDateTime.now());
+        } else if (archivoUrl != null && !archivoUrl.isBlank()) {
+            if (!esEnlaceValido(archivoUrl)) {
+                return ResponseEntity.badRequest().body("archivoUrl debe ser un enlace válido (http:// o https://)");
+            }
+            entregaBase.setArchivoUrl(archivoUrl.trim());
+            entregaBase.setFechaEntrega(LocalDateTime.now());
+        }
+        if (descripcion != null) {
+            entregaBase.setDescripcion(descripcion);
+        }
+        return ResponseEntity.ok(iEntrega.save(entregaBase));
     }
 
     // Eliminar entrega (DELETE /entregas/{id}?idUsuario=)
@@ -131,7 +218,7 @@ public class EntregaController {
     @Autowired
     AccesoCurso accesoCurso;
 
-    public record EntregaRequest(String archivoUrl) {}
+    public record EntregaRequest(String archivoUrl, String descripcion) {}
 
     //busca el equipo del alumno dentro de una tarea por equipos
     private Optional<Equipo> equipoDelAlumno(Tarea tarea, Integer idAlumno) {
@@ -207,8 +294,9 @@ public class EntregaController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Aun no has entregado esta tarea"));
     }
 
-    //entregar tarea
-    @PostMapping ("/tareas/{idTarea}/entregas")
+    //entregar tarea con un enlace (JSON). Si se sube un archivo se usa
+    //la variante multipart de abajo.
+    @PostMapping (value = "/tareas/{idTarea}/entregas", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> entregar(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
             @RequestBody EntregaRequest req) {
         Optional<Tarea> opt = iTarea.findById(idTarea);
@@ -221,6 +309,9 @@ public class EntregaController {
         }
         if (req.archivoUrl() == null || req.archivoUrl().isBlank()) {
             return ResponseEntity.badRequest().body("archivoUrl es obligatorio");
+        }
+        if (!esEnlaceValido(req.archivoUrl())) {
+            return ResponseEntity.badRequest().body("archivoUrl debe ser un enlace válido (http:// o https://)");
         }
         Usuario alumno = iUsuario.findById(idUsuario).get();
         Equipo equipo = null;
@@ -240,6 +331,62 @@ public class EntregaController {
         }
         //individual: se llena id_alumno; por equipo: se llena id_equipo
         Entrega entrega = new Entrega(tarea, equipo == null ? alumno : null, equipo, req.archivoUrl());
+        entrega.setDescripcion(req.descripcion());
+        entrega.setFechaEntrega(LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.CREATED).body(iEntrega.save(entrega));
+    }
+
+    //entregar tarea subiendo un archivo
+    @PostMapping (value = "/tareas/{idTarea}/entregas", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> entregarArchivo(@PathVariable Integer idTarea, @RequestParam Integer idUsuario,
+            @RequestParam(value = "archivo", required = false) MultipartFile archivo,
+            @RequestParam(value = "archivoUrl", required = false) String archivoUrl,
+            @RequestParam(value = "descripcion", required = false) String descripcion,
+            HttpServletRequest request) {
+        Optional<Tarea> opt = iTarea.findById(idTarea);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
+        }
+        Tarea tarea = opt.get();
+        if (!accesoCurso.esAlumnoInscrito(tarea.getCurso(), idUsuario)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No estas inscrito en este curso");
+        }
+        boolean hayArchivo = archivo != null && !archivo.isEmpty();
+        if (!hayArchivo && (archivoUrl == null || archivoUrl.isBlank())) {
+            return ResponseEntity.badRequest().body("Sube un archivo o pega un enlace válido");
+        }
+        if (!hayArchivo && !esEnlaceValido(archivoUrl)) {
+            return ResponseEntity.badRequest().body("archivoUrl debe ser un enlace válido (http:// o https://)");
+        }
+        Usuario alumno = iUsuario.findById(idUsuario).get();
+        Equipo equipo = null;
+        if (Boolean.TRUE.equals(tarea.getEsEquipo())) {
+            Optional<Equipo> eq = equipoDelAlumno(tarea, idUsuario);
+            if (eq.isEmpty()) {
+                return ResponseEntity.badRequest().body("La tarea es por equipo y no perteneces a ningun equipo");
+            }
+            equipo = eq.get();
+        }
+        if (entregaDelAlumno(tarea, idUsuario).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Ya existe una entrega; usa PUT para reemplazarla");
+        }
+        LocalDateTime limite = fechaLimiteDe(tarea, idUsuario, equipo);
+        if (limite != null && LocalDateTime.now().isAfter(limite)) {
+            return ResponseEntity.badRequest().body("La fecha limite ya paso");
+        }
+        String urlFinal;
+        if (hayArchivo) {
+            try {
+                urlFinal = guardarArchivo(archivo, request);
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("No se pudo guardar el archivo");
+            }
+        } else {
+            urlFinal = archivoUrl.trim();
+        }
+        //individual: se llena id_alumno; por equipo: se llena id_equipo
+        Entrega entrega = new Entrega(tarea, equipo == null ? alumno : null, equipo, urlFinal);
+        entrega.setDescripcion(descripcion);
         entrega.setFechaEntrega(LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(iEntrega.save(entrega));
     }

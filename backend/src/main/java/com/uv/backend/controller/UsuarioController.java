@@ -93,7 +93,7 @@ public class UsuarioController {
 
     // Editar usuario (PUT /usuarios/{id})
     @PutMapping("/{id}")
-    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody UsuarioEditRequest req) {
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody UsuarioEditRequest req) {
         var opt = iUsuario.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -112,6 +112,9 @@ public class UsuarioController {
             String rol = req.rol().toUpperCase();
             if (!ROLES.contains(rol)) {
                 return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
+            }
+            if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
             }
             u.setRol(rol);
         }
@@ -135,7 +138,7 @@ public class UsuarioController {
 
     // Cambiar rol (PATCH /usuarios/{id}/rol)
     @PatchMapping("/{id}/rol")
-    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestBody RolRequest req) {
+    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody RolRequest req) {
         if (vacio(req.rol())) {
             return ResponseEntity.badRequest().body("rol es obligatorio");
         }
@@ -148,6 +151,9 @@ public class UsuarioController {
             return ResponseEntity.notFound().build();
         }
         Usuario u = opt.get();
+        if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
+        }
         u.setRol(rol);
         return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }

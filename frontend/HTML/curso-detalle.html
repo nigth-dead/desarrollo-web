@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del curso | LMS</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/curso-detalle.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform" id="contenidoCurso">
+        <a class="volver" href="cursos.html">&larr; Volver a cursos</a>
+
+        <!-- Encabezado del curso -->
+        <section class="apartado" id="encabezadoCurso"></section>
+
+        <!-- Barra de pestañas -->
+        <div class="tabs" id="barraPestanas" role="tablist">
+            <button type="button" data-pestana="tareas" class="activo">Tareas</button>
+            <button type="button" data-pestana="examenes">Exámenes</button>
+            <button type="button" data-pestana="foros">Foros</button>
+            <button type="button" data-pestana="alumnos">Alumnos</button>
+        </div>
+
+        <!-- Tareas -->
+        <section class="apartado" data-pestana="tareas">
+            <div class="apartado-encabezado">
+                <h2>Tareas</h2>
+                <button type="button" class="btn btn-primario" id="btnAbrirDialogoTarea">Crear tarea</button>
+            </div>
+            <div id="listaTareas" class="lista-tarjetas"></div>
+        </section>
+
+        <!-- Foros -->
+        <section class="apartado" data-pestana="foros" hidden>
+            <div class="apartado-encabezado">
+                <h2>Foros</h2>
+                <button type="button" class="btn btn-primario" id="btnAbrirDialogoTema">Crear tema</button>
+            </div>
+            <div id="listaForos" class="lista-tarjetas"></div>
+        </section>
+
+        <!-- Exámenes -->
+        <section class="apartado" data-pestana="examenes" hidden>
+            <div class="apartado-encabezado">
+                <h2>Exámenes</h2>
+                <a class="btn btn-primario" id="btnCrearExamen" href="#">Crear examen</a>
+            </div>
+            <div id="listaExamenes" class="lista-tarjetas"></div>
+        </section>
+
+        <!-- Alumnos -->
+        <section class="apartado" data-pestana="alumnos" hidden>
+            <div class="apartado-encabezado">
+                <h2>Alumnos</h2>
+                <div class="acciones">
+                    <button type="button" class="btn btn-secundario" id="btnInscribirAlumno">Inscribir alumno</button>
+                    <button type="button" class="btn btn-secundario" id="btnCargaMasiva">Carga masiva (.xlsx)</button>
+                </div>
+            </div>
+            <div id="listaAlumnos" class="lista-tarjetas"></div>
+        </section>
+    </main>
+
+    <!-- Crear tarea -->
+    <dialog id="dialogoTarea" class="dialogo">
+        <form id="formTarea">
+            <div class="dialogo-encabezado">
+                <h3>Crear tarea</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoTarea" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="tareaTitulo">Título</label>
+                <input type="text" id="tareaTitulo" required>
+                <label for="tareaDescripcion">Descripción</label>
+                <textarea id="tareaDescripcion" rows="3" required></textarea>
+                <label for="tareaFechaProgramada">Fecha programada</label>
+                <input type="datetime-local" id="tareaFechaProgramada" required>
+                <label for="tareaFechaLimite">Fecha límite</label>
+                <input type="datetime-local" id="tareaFechaLimite" required>
+                <label class="campo-checkbox">
+                    <input type="checkbox" id="tareaEsEquipo"> Es tarea en equipo
+                </label>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoTarea">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar tarea</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Crear tema de foro -->
+    <dialog id="dialogoTema" class="dialogo">
+        <form id="formTema">
+            <div class="dialogo-encabezado">
+                <h3>Crear tema de foro</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoTema" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="temaTitulo">Título</label>
+                <input type="text" id="temaTitulo" required>
+                <label for="temaDescripcion">Descripción</label>
+                <textarea id="temaDescripcion" rows="3" required></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoTema">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Crear tema</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar tema de foro -->
+    <dialog id="dialogoEditarTema" class="dialogo">
+        <form id="formEditarTema">
+            <div class="dialogo-encabezado">
+                <h3>Editar tema de foro</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEditarTema" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarForoId">
+                <label for="editarForoTitulo">Título</label>
+                <input type="text" id="editarForoTitulo" required>
+                <label for="editarForoDescripcion">Descripción</label>
+                <textarea id="editarForoDescripcion" rows="3" required></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEditarTema">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar comentario -->
+    <dialog id="dialogoEditarComentario" class="dialogo">
+        <form id="formEditarComentario">
+            <div class="dialogo-encabezado">
+                <h3>Editar comentario</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEditarComentario" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarComentarioId">
+                <label for="editarComentarioContenido">Comentario</label>
+                <textarea id="editarComentarioContenido" rows="3" required></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEditarComentario">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Inscribir alumno (dentro del curso) -->
+    <dialog id="dialogoInscribir" class="dialogo">
+        <form id="formInscribirAlumno">
+            <div class="dialogo-encabezado">
+                <h3>Inscribir alumno</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoInscribir" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="emailAlumno">Correo del alumno</label>
+                <input type="email" id="emailAlumno" name="email" placeholder="alumno@correo.com" required>
+                <p class="nota">El alumno debe tener ya una cuenta registrada.</p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoInscribir">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Inscribir alumno</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Carga masiva -->
+    <dialog id="dialogoCarga" class="dialogo">
+        <form id="formCargaMasiva">
+            <div class="dialogo-encabezado">
+                <h3>Carga masiva de alumnos</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoCarga" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="archivoXlsx">Archivo Excel (.xlsx)</label>
+                <input type="file" id="archivoXlsx" name="archivo" accept=".xlsx" required>
+                <p class="texto-ayuda" id="nombreArchivo">Ningún archivo seleccionado</p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoCarga">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Subir archivo</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/curso-detalle.js"></script>
+</body>
+</html>

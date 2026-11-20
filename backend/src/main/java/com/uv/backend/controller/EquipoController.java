@@ -152,8 +152,12 @@ public class EquipoController {
         if (tarea.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
         }
-        if (!accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede crear equipos");
+        // Crear un equipo lo puede hacer el maestro del curso o un alumno
+        // inscrito en el curso.
+        boolean esMaestro = accesoCurso.esMaestro(tarea.get().getCurso(), idUsuario);
+        boolean esAlumno = accesoCurso.esAlumnoInscrito(tarea.get().getCurso(), idUsuario);
+        if (!esMaestro && !esAlumno) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
         }
         if (!Boolean.TRUE.equals(tarea.get().getEsEquipo())) {
             return ResponseEntity.badRequest().body("La tarea no es por equipo");
@@ -161,7 +165,21 @@ public class EquipoController {
         if (req.nombreEquipo() == null || req.nombreEquipo().isBlank()) {
             return ResponseEntity.badRequest().body("nombreEquipo es obligatorio");
         }
+        // Un alumno solo puede estar en un equipo por tarea.
+        if (!esMaestro) {
+            boolean yaEnEquipo = iEquipo.findByTareaIdTarea(tarea.get().getIdTarea()).stream()
+                    .anyMatch(e -> e.getIntegrantes().stream().anyMatch(u -> u.getIdUsuario().equals(idUsuario)));
+            if (yaEnEquipo) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Ya perteneces a un equipo de esta tarea");
+            }
+        }
         Equipo equipo = iEquipo.save(new Equipo(tarea.get(), req.nombreEquipo()));
+        // Si lo crea un alumno, queda como integrante de su propio equipo.
+        if (!esMaestro) {
+            Usuario creador = iUsuario.findById(idUsuario).get();
+            equipo.getIntegrantes().add(creador);
+            equipo = iEquipo.save(equipo);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(equipo);
     }
 
@@ -187,11 +205,17 @@ public class EquipoController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
         }
         Equipo equipo = opt.get();
-        if (!accesoCurso.esMaestro(equipo.getTarea().getCurso(), idUsuario)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede agregar integrantes");
-        }
         if (req.idsAlumnos() == null || req.idsAlumnos().isEmpty()) {
             return ResponseEntity.badRequest().body("idsAlumnos es obligatorio");
+        }
+        // Agregar integrantes al equipo
+        boolean esMaestro = accesoCurso.esMaestro(equipo.getTarea().getCurso(), idUsuario);
+        boolean soyIntegrante = equipo.getIntegrantes().stream()
+                .anyMatch(u -> u.getIdUsuario().equals(idUsuario));
+        boolean soloMeAgrego = req.idsAlumnos().size() == 1
+                && req.idsAlumnos().get(0).equals(idUsuario);
+        if (!esMaestro && !soyIntegrante && !soloMeAgrego) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso o un integrante del equipo puede agregar integrantes");
         }
         List<Equipo> equiposDeLaTarea = iEquipo.findByTareaIdTarea(equipo.getTarea().getIdTarea());
         for (Integer idAlumno : req.idsAlumnos()) {
