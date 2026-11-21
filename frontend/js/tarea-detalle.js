@@ -331,16 +331,21 @@ document.getElementById("btnEntregar").addEventListener("click", async () => {
 
 document.getElementById("formEntrega").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+
     const archivo = document.getElementById("entregaArchivo");
     const archivoUrl = document.getElementById("entregaArchivoUrl").value.trim();
     const file = archivo.files.length > 0 ? archivo.files[0] : null;
+
     if (!file && !archivoUrl) {
+        mostrarToast("Selecciona un archivo o pega un enlace antes de entregar.");
         return;
     }
+
     const grupoEquipo = document.getElementById("grupoEquipoEntrega");
     const idEquipo = !grupoEquipo.hidden && document.getElementById("entregaEquipo").value
         ? Number(document.getElementById("entregaEquipo").value)
         : null;
+
     const resultado = await Store.entregarTarea({
         id_tarea: tarea.id_tarea,
         id_equipo: idEquipo,
@@ -348,12 +353,16 @@ document.getElementById("formEntrega").addEventListener("submit", async (evento)
         archivo_url: archivoUrl,
         descripcion: document.getElementById("entregaDescripcion").value.trim()
     });
+
     if (resultado && resultado.ok === false) {
+        mostrarToast("No se pudo enviar la entrega: " + resultado.error);
         return;
     }
+
     await renderEntregas();
     evento.target.reset();
     cerrarDialogo("dialogoEntrega");
+    mostrarToast("Entrega enviada correctamente.");
 });
 
 // Calificar entrega / editar y eliminar
@@ -380,13 +389,20 @@ document.getElementById("listaEntregas").addEventListener("click", async (evento
     }
     const botonEliminar = evento.target.closest("[data-eliminar-entrega]");
     if (botonEliminar) {
-        const resultado = await Store.eliminarEntrega(Number(botonEliminar.dataset.eliminarEntrega));
-        if (!resultado.ok) {
-            return;
-        }
-        await renderEntregas();
+        const resultado = await Store.eliminarEntrega(
+        Number(botonEliminar.dataset.eliminarEntrega)
+    );
+
+    if (!resultado.ok) {
+        mostrarToast("No se pudo eliminar la entrega: " + resultado.error);
         return;
     }
+
+    await renderEntregas();
+    mostrarToast("Entrega eliminada correctamente.");
+    return;
+    }
+
     const botonCalificar = evento.target.closest("[data-calificar-id]");
     if (!botonCalificar) return;
     entregaACalificarId = Number(botonCalificar.dataset.calificarId);
@@ -400,14 +416,22 @@ document.getElementById("listaEntregas").addEventListener("click", async (evento
 
 document.getElementById("formCalificar").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.calificarEntrega(
+
+    const resultado = await Store.calificarEntrega(
         entregaACalificarId,
         Number(document.getElementById("calificarPuntaje").value),
         document.getElementById("calificarComentario").value
     );
+
+    if (!resultado) {
+        mostrarToast("No se pudo guardar la calificación.");
+        return;
+    }
+
     await renderEntregas();
     evento.target.reset();
     cerrarDialogo("dialogoCalificar");
+    mostrarToast("Calificación guardada correctamente.");
 });
 
 // Editar entrega
@@ -417,6 +441,7 @@ document.getElementById("formEditarEntrega").addEventListener("submit", async (e
     const archivoUrl = document.getElementById("editarEntregaArchivoUrl").value.trim();
     const file = archivo.files.length > 0 ? archivo.files[0] : null;
     if (!file && !archivoUrl) {
+        mostrarToast("Selecciona un archivo o escribe un enlace.");
         return;
     }
     const resultado = await Store.actualizarEntrega(Number(document.getElementById("editarEntregaId").value), { archivo: file, archivo_url: archivoUrl, descripcion: document.getElementById("editarEntregaDescripcion").value.trim() });
