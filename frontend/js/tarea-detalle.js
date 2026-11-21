@@ -64,7 +64,14 @@ async function renderEncabezado() {
             abrirDialogo("dialogoEditarTarea");
         });
         document.getElementById("btnEliminarTarea").addEventListener("click", async () => {
-            await Store.eliminarTarea(tarea.id_tarea);
+            const confirmado = await window.Validacion.confirmar(
+                "¿Eliminar la tarea \"" + tarea.titulo + "\"? También se eliminarán sus entregas.", "Eliminar");
+            if (!confirmado) return;
+            const eliminada = await Store.eliminarTarea(tarea.id_tarea);
+            if (!eliminada) {
+                window.mostrarToast("No se pudo eliminar la tarea. Inténtalo de nuevo.");
+                return;
+            }
             window.location.href = "curso-detalle.html?id=" + curso.id_curso;
         });
     }
@@ -331,10 +338,21 @@ document.getElementById("btnEntregar").addEventListener("click", async () => {
 
 document.getElementById("formEntrega").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
     const archivo = document.getElementById("entregaArchivo");
-    const archivoUrl = document.getElementById("entregaArchivoUrl").value.trim();
+    const urlInput = document.getElementById("entregaArchivoUrl");
+    const archivoUrl = urlInput.value.trim();
     const file = archivo.files.length > 0 ? archivo.files[0] : null;
     if (!file && !archivoUrl) {
+        V.marcarCampo(urlInput, "Sube un archivo o pega un enlace.");
+        V.mostrarError(form, "Sube un archivo o pega un enlace válido (que empiece con http:// o https://).");
+        return;
+    }
+    if (archivoUrl && !V.esUrlHttp(archivoUrl)) {
+        V.marcarCampo(urlInput, "El enlace debe empezar con http:// o https://.");
+        V.mostrarError(form, "Pega un enlace válido (que empiece con http:// o https://) o sube un archivo.");
         return;
     }
     const grupoEquipo = document.getElementById("grupoEquipoEntrega");
@@ -348,12 +366,13 @@ document.getElementById("formEntrega").addEventListener("submit", async (evento)
         archivo_url: archivoUrl,
         descripcion: document.getElementById("entregaDescripcion").value.trim()
     });
-    if (resultado && resultado.ok === false) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo enviar la entrega. Inténtalo de nuevo.")) {
         return;
     }
     await renderEntregas();
     evento.target.reset();
     cerrarDialogo("dialogoEntrega");
+    V.mostrarExito("Entrega enviada.");
 });
 
 // Calificar entrega / editar y eliminar
@@ -380,10 +399,15 @@ document.getElementById("listaEntregas").addEventListener("click", async (evento
     }
     const botonEliminar = evento.target.closest("[data-eliminar-entrega]");
     if (botonEliminar) {
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar esta entrega? Esta acción no se puede deshacer.", "Eliminar");
+        if (!confirmado) return;
         const resultado = await Store.eliminarEntrega(Number(botonEliminar.dataset.eliminarEntrega));
         if (!resultado.ok) {
+            window.mostrarToast(resultado.error || "No se pudo eliminar la entrega.");
             return;
         }
+        window.Validacion.mostrarExito("Entrega eliminada.");
         await renderEntregas();
         return;
     }
@@ -400,32 +424,58 @@ document.getElementById("listaEntregas").addEventListener("click", async (evento
 
 document.getElementById("formCalificar").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.calificarEntrega(
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const puntajeInput = document.getElementById("calificarPuntaje");
+    const puntaje = Number(puntajeInput.value);
+    if (puntajeInput.value === "" || Number.isNaN(puntaje) || puntaje < 0 || puntaje > 100) {
+        V.marcarCampo(puntajeInput, "El puntaje debe estar entre 0 y 100.");
+        V.mostrarError(form, "El puntaje debe estar entre 0 y 100.");
+        return;
+    }
+    const calificada = await Store.calificarEntrega(
         entregaACalificarId,
-        Number(document.getElementById("calificarPuntaje").value),
+        puntaje,
         document.getElementById("calificarComentario").value
     );
+    if (!V.siFalloMostrar(form, calificada, "No se pudo guardar la calificación. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderEntregas();
     evento.target.reset();
     cerrarDialogo("dialogoCalificar");
+    V.mostrarExito("Calificación guardada.");
 });
 
 // Editar entrega
 document.getElementById("formEditarEntrega").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
     const archivo = document.getElementById("editarEntregaArchivo");
-    const archivoUrl = document.getElementById("editarEntregaArchivoUrl").value.trim();
+    const urlInput = document.getElementById("editarEntregaArchivoUrl");
+    const archivoUrl = urlInput.value.trim();
     const file = archivo.files.length > 0 ? archivo.files[0] : null;
     if (!file && !archivoUrl) {
+        V.marcarCampo(urlInput, "Sube un archivo o pega un enlace.");
+        V.mostrarError(form, "Sube un archivo o pega un enlace válido (que empiece con http:// o https://).");
+        return;
+    }
+    if (archivoUrl && !V.esUrlHttp(archivoUrl)) {
+        V.marcarCampo(urlInput, "El enlace debe empezar con http:// o https://.");
+        V.mostrarError(form, "Pega un enlace válido (que empiece con http:// o https://) o sube un archivo.");
         return;
     }
     const resultado = await Store.actualizarEntrega(Number(document.getElementById("editarEntregaId").value), { archivo: file, archivo_url: archivoUrl, descripcion: document.getElementById("editarEntregaDescripcion").value.trim() });
-    if (!resultado.ok) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo guardar los cambios de la entrega. Inténtalo de nuevo.")) {
         return;
     }
     await renderEntregas();
     evento.target.reset();
     cerrarDialogo("dialogoEditarEntrega");
+    V.mostrarExito("Entrega actualizada.");
 });
 
 // Descargar la descripcion como .txt
@@ -480,34 +530,69 @@ document.getElementById("contenedorIntegrantes").addEventListener("click", (even
 
 document.getElementById("formEquipo").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const nombreInput = document.getElementById("equipoNombre");
+    const nombre = nombreInput.value.trim();
+    if (!nombre) {
+        V.marcarCampo(nombreInput, "Escribe el nombre del equipo.");
+        V.mostrarError(form, "Escribe el nombre del equipo.");
+        return;
+    }
     const ids = Array.from(document.querySelectorAll(".select-integrante"))
         .map((select) => Number(select.value))
         .filter((id, i, arr) => !Number.isNaN(id) && arr.indexOf(id) === i);
-    await Store.crearEquipo(tarea.id_tarea, document.getElementById("equipoNombre").value, ids);
+    const creado = await Store.crearEquipo(tarea.id_tarea, nombre, ids);
+    if (!V.siFalloMostrar(form, creado, "No se pudo crear el equipo. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderEquipos();
     evento.target.reset();
     cerrarDialogo("dialogoEquipo");
+    V.mostrarExito("Equipo creado.");
 });
 
 // Equipos: editar, agregar/quitar integrante, eliminar
 document.getElementById("listaEquipos").addEventListener("click", async (evento) => {
     const botonUnirse = evento.target.closest("[data-unirse-equipo]");
     if (botonUnirse) {
-        await Store.agregarIntegrante(Number(botonUnirse.dataset.unirseEquipo), usuario.id_usuario);
+        const resultado = await Store.agregarIntegrante(Number(botonUnirse.dataset.unirseEquipo), usuario.id_usuario);
+        if (!resultado.ok) {
+            window.mostrarToast(resultado.error || "No se pudo unirte al equipo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Te uniste al equipo.");
         await renderEquipos();
         await renderEntregas();
         return;
     }
     const botonSalir = evento.target.closest("[data-salir-equipo]");
     if (botonSalir) {
-        await Store.quitarIntegrante(Number(botonSalir.dataset.salirEquipo), usuario.id_usuario);
+        const confirmado = await window.Validacion.confirmar(
+            "¿Salir de este equipo? Perderás el acceso a sus entregas.", "Salir");
+        if (!confirmado) return;
+        const ok = await Store.quitarIntegrante(Number(botonSalir.dataset.salirEquipo), usuario.id_usuario);
+        if (!ok) {
+            window.mostrarToast("No se pudo salir del equipo. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Saliste del equipo.");
         await renderEquipos();
         await renderEntregas();
         return;
     }
     const botonQuitar = evento.target.closest("[data-quitar-integrante]");
     if (botonQuitar) {
-        await Store.quitarIntegrante(Number(botonQuitar.dataset.equipoId), Number(botonQuitar.dataset.quitarIntegrante));
+        const confirmado = await window.Validacion.confirmar(
+            "¿Quitar a este integrante del equipo?", "Quitar");
+        if (!confirmado) return;
+        const ok = await Store.quitarIntegrante(Number(botonQuitar.dataset.equipoId), Number(botonQuitar.dataset.quitarIntegrante));
+        if (!ok) {
+            window.mostrarToast("No se pudo quitar al integrante. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Integrante eliminado del equipo.");
         await renderEquipos();
         return;
     }
@@ -539,8 +624,16 @@ document.getElementById("listaEquipos").addEventListener("click", async (evento)
     }
     const botonEliminar = evento.target.closest("[data-eliminar-equipo]");
     if (botonEliminar) {
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar este equipo? Esta acción no se puede deshacer.", "Eliminar");
+        if (!confirmado) return;
         const idEquipo = Number(botonEliminar.dataset.eliminarEquipo);
-        await Store.eliminarEquipo(idEquipo);
+        const eliminado = await Store.eliminarEquipo(idEquipo);
+        if (!eliminado) {
+            window.mostrarToast("No se pudo eliminar el equipo. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Equipo eliminado.");
         await renderTodo();
         return;
     }
@@ -548,24 +641,42 @@ document.getElementById("listaEquipos").addEventListener("click", async (evento)
 
 document.getElementById("formEditarEquipo").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.actualizarEquipo(Number(document.getElementById("editarEquipoId").value), {
-        nombre_equipo: document.getElementById("editarEquipoNombre").value
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const nombreInput = document.getElementById("editarEquipoNombre");
+    const nombre = nombreInput.value.trim();
+    if (!nombre) {
+        V.marcarCampo(nombreInput, "Escribe el nombre del equipo.");
+        V.mostrarError(form, "Escribe el nombre del equipo.");
+        return;
+    }
+    const actualizado = await Store.actualizarEquipo(Number(document.getElementById("editarEquipoId").value), {
+        nombre_equipo: nombre
     });
+    if (!V.siFalloMostrar(form, actualizado, "No se pudo guardar los cambios del equipo. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderEquipos();
     cerrarDialogo("dialogoEditarEquipo");
+    V.mostrarExito("Equipo actualizado.");
 });
 
 document.getElementById("formAgregarIntegrante").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
     const resultado = await Store.agregarIntegrante(
         Number(document.getElementById("agregarIntegranteEquipoId").value),
         Number(document.getElementById("agregarIntegranteAlumno").value)
     );
-    if (!resultado.ok) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo agregar al integrante. Inténtalo de nuevo.")) {
         return;
     }
     await renderEquipos();
     cerrarDialogo("dialogoAgregarIntegrante");
+    V.mostrarExito("Integrante agregado.");
 });
 
 // Solicitar prorroga
@@ -577,19 +688,42 @@ document.getElementById("btnSolicitarProrroga").addEventListener("click", async 
 
 document.getElementById("formProrroga").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const fechaInput = document.getElementById("prorrogaNuevaFecha");
+    const justificacionInput = document.getElementById("prorrogaJustificacion");
+    const nuevaFecha = fechaInput.value;
+    const justificacion = justificacionInput.value.trim();
+    const limiteActual = await Store.fechaLimiteEfectiva(tarea.id_tarea, usuario.id_usuario) || tarea.fecha_limite;
+    const errorFecha = V.validarProrroga(nuevaFecha, limiteActual);
+    if (errorFecha) {
+        V.marcarCampo(fechaInput, errorFecha);
+        V.mostrarError(form, errorFecha + (limiteActual ? " La fecha límite actual es " + Store.formatearFecha(limiteActual) + "." : ""));
+        return;
+    }
+    if (justificacion.length < 10) {
+        V.marcarCampo(justificacionInput, "La justificación debe tener al menos 10 caracteres.");
+        V.mostrarError(form, "Explica por qué necesitas más tiempo: la justificación debe tener al menos 10 caracteres.");
+        return;
+    }
     const grupoEquipo = document.getElementById("grupoEquipoProrroga");
     const idEquipo = !grupoEquipo.hidden && document.getElementById("prorrogaEquipo").value
         ? Number(document.getElementById("prorrogaEquipo").value)
         : null;
-    await Store.solicitarProrroga({
+    const solicitada = await Store.solicitarProrroga({
         id_tarea: tarea.id_tarea,
         id_equipo: idEquipo,
-        nueva_fecha_limite: document.getElementById("prorrogaNuevaFecha").value,
-        justificacion: document.getElementById("prorrogaJustificacion").value.trim()
+        nueva_fecha_limite: nuevaFecha,
+        justificacion: justificacion
     });
+    if (!V.siFalloMostrar(form, solicitada, "No se pudo registrar la prórroga. Revisa la fecha y la justificación e inténtalo de nuevo.")) {
+        return;
+    }
     await renderProrrogas();
     evento.target.reset();
     cerrarDialogo("dialogoProrroga");
+    V.mostrarExito("Prórroga solicitada. Está pendiente de aprobación.");
 });
 
 // Prorrogas: aprobar, rechazar, eliminar
@@ -599,16 +733,26 @@ document.getElementById("listaProrrogas").addEventListener("click", async (event
         const aprobada = botonAccion.dataset.accionProrroga === "aprobar";
         const idProrroga = Number(botonAccion.dataset.id);
         const prorroga = prorrogasActuales.find((p) => p.id_prorroga === idProrroga);
-        await Store.resolverProrroga(idProrroga, aprobada, prorroga ? prorroga.nueva_fecha_limite : undefined);
+        const resuelta = await Store.resolverProrroga(idProrroga, aprobada, prorroga ? prorroga.nueva_fecha_limite : undefined);
+        if (!resuelta) {
+            window.mostrarToast("No se pudo resolver la prórroga. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito(aprobada ? "Prórroga aprobada." : "Prórroga rechazada.");
         await renderProrrogas();
         return;
     }
     const botonEliminar = evento.target.closest("[data-eliminar-prorroga]");
     if (botonEliminar) {
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar esta solicitud de prórroga?", "Eliminar");
+        if (!confirmado) return;
         const resultado = await Store.eliminarProrroga(Number(botonEliminar.dataset.eliminarProrroga));
         if (!resultado.ok) {
+            window.mostrarToast(resultado.error || "No se pudo eliminar la prórroga.");
             return;
         }
+        window.Validacion.mostrarExito("Prórroga eliminada.");
         await renderProrrogas();
         return;
     }
@@ -617,13 +761,54 @@ document.getElementById("listaProrrogas").addEventListener("click", async (event
 // Editar tarea
 document.getElementById("formEditarTarea").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.actualizarTarea(tarea.id_tarea, {
-        titulo: document.getElementById("editarTareaTitulo").value,
-        descripcion: document.getElementById("editarTareaDescripcion").value,
-        fecha_programada: document.getElementById("editarTareaFechaProgramada").value,
-        fecha_limite: document.getElementById("editarTareaFechaLimite").value,
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const tituloInput = document.getElementById("editarTareaTitulo");
+    const descripcionInput = document.getElementById("editarTareaDescripcion");
+    const programadaInput = document.getElementById("editarTareaFechaProgramada");
+    const limiteInput = document.getElementById("editarTareaFechaLimite");
+    const titulo = tituloInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!titulo) {
+        V.marcarCampo(tituloInput, "Escribe el título de la tarea.");
+        V.mostrarError(form, "Escribe el título de la tarea.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción de la tarea.");
+        V.mostrarError(form, "Escribe una descripción de la tarea.");
+        return;
+    }
+    if (!programadaInput.value || !limiteInput.value) {
+        V.mostrarError(form, "Elige la fecha programada y la fecha límite.");
+        return;
+    }
+    if (new Date(limiteInput.value).getTime() <= new Date(programadaInput.value).getTime()) {
+        V.marcarCampo(limiteInput, "La fecha límite debe ser posterior a la fecha programada.");
+        V.mostrarError(form, "La fecha límite debe ser posterior a la fecha programada.");
+        return;
+    }
+    if (limiteInput.value !== String(tarea.fecha_limite || "").slice(0, 16)) {
+        const ahora = new Date();
+        ahora.setSeconds(0, 0);
+        if (new Date(limiteInput.value).getTime() < ahora.getTime()) {
+            V.marcarCampo(limiteInput, "La fecha límite no puede ser pasada.");
+            V.mostrarError(form, "La fecha límite no puede ser una fecha pasada.");
+            return;
+        }
+    }
+    const actualizada = await Store.actualizarTarea(tarea.id_tarea, {
+        titulo: titulo,
+        descripcion: descripcion,
+        fecha_programada: programadaInput.value,
+        fecha_limite: limiteInput.value,
         es_equipo: document.getElementById("editarTareaEsEquipo").checked
     });
+    if (!V.siFalloMostrar(form, actualizada, "No se pudo guardar los cambios de la tarea. Revisa las fechas e inténtalo de nuevo.")) {
+        return;
+    }
+    V.mostrarExito("Tarea actualizada.");
     window.location.href = "tarea-detalle.html?id=" + tarea.id_tarea;
 });
 })();

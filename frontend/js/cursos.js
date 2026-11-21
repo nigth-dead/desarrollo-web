@@ -98,7 +98,15 @@ listaCursos.addEventListener("click", async (evento) => {
     if (botonEliminar) {
         const curso = await Store.cursoPorId(Number(botonEliminar.dataset.id));
         if (!curso) return;
-        await Store.eliminarCurso(curso.id_curso);
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar el curso \"" + curso.nombre + "\"? Esta acción no se puede deshacer.", "Eliminar");
+        if (!confirmado) return;
+        const eliminado = await Store.eliminarCurso(curso.id_curso);
+        if (!eliminado) {
+            window.mostrarToast("No se pudo eliminar el curso. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Curso eliminado.");
         await renderCursos();
         return;
     }
@@ -107,35 +115,87 @@ listaCursos.addEventListener("click", async (evento) => {
 // Crear curso
 document.getElementById("formCrearCurso").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    const nombre = document.getElementById("crearNombre").value;
-    const descripcion = document.getElementById("crearDescripcion").value;
-    await Store.crearCurso({ nombre, descripcion });
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const nombreInput = document.getElementById("crearNombre");
+    const descripcionInput = document.getElementById("crearDescripcion");
+    const nombre = nombreInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!nombre) {
+        V.marcarCampo(nombreInput, "Escribe el nombre del curso.");
+        V.mostrarError(form, "Escribe el nombre del curso.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción del curso.");
+        V.mostrarError(form, "Escribe una descripción del curso.");
+        return;
+    }
+    const creado = await Store.crearCurso({ nombre, descripcion });
+    if (!V.siFalloMostrar(form, creado, "No se pudo crear el curso. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderCursos();
     evento.target.reset();
     cerrarDialogo("dialogCrear");
+    V.mostrarExito("Curso creado.");
 });
 
 // Editar curso
 document.getElementById("formEditarCurso").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const nombreInput = document.getElementById("editarNombre");
+    const descripcionInput = document.getElementById("editarDescripcion");
+    const nombre = nombreInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!nombre) {
+        V.marcarCampo(nombreInput, "Escribe el nombre del curso.");
+        V.mostrarError(form, "Escribe el nombre del curso.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción del curso.");
+        V.mostrarError(form, "Escribe una descripción del curso.");
+        return;
+    }
     const id = Number(document.getElementById("editarId").value);
-    await Store.actualizarCurso(id, {
-        nombre: document.getElementById("editarNombre").value,
-        descripcion: document.getElementById("editarDescripcion").value
-    });
+    const actualizado = await Store.actualizarCurso(id, { nombre, descripcion });
+    if (!V.siFalloMostrar(form, actualizado, "No se pudo guardar los cambios del curso. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderCursos();
     cerrarDialogo("dialogEditar");
+    V.mostrarExito("Curso actualizado.");
 });
 
 // Unirse con codigo
 document.getElementById("formUnirseCodigo").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    const codigo = document.getElementById("codigoInvitacion").value;
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const codigoInput = document.getElementById("codigoInvitacion");
+    const codigo = codigoInput.value.trim().toUpperCase();
+    if (!codigo) {
+        V.marcarCampo(codigoInput, "Escribe el código de invitación del curso.");
+        V.mostrarError(form, "Escribe el código de invitación del curso.");
+        return;
+    }
+    if (/\s/.test(codigo)) {
+        V.marcarCampo(codigoInput, "El código no debe tener espacios.");
+        V.mostrarError(form, "El código no debe tener espacios.");
+        return;
+    }
     const resultado = await Store.unirseConCodigo(codigo);
-    if (!resultado.ok) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo unirte al curso. Revisa el código e inténtalo de nuevo.")) {
         return;
     }
     await renderCursos();
     evento.target.reset();
     cerrarDialogo("dialogUnirse");
+    V.mostrarExito("Te uniste al curso.");
 });

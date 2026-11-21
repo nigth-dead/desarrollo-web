@@ -147,45 +147,120 @@ function leerPreguntas() {
     return preguntas;
 }
 
+// Valida las preguntas en el formulario: texto, puntos y opciones.
+// Si algo falla marca el campo, muestra el error y devuelve el mensaje.
+function validarPreguntas() {
+    const V = window.Validacion;
+    const bloques = contenedorPreguntas.querySelectorAll(".bloque-pregunta");
+    if (bloques.length === 0) return "Agrega al menos una pregunta al examen.";
+    for (let i = 0; i < bloques.length; i++) {
+        const bloque = bloques[i];
+        const n = i + 1;
+        const texto = bloque.querySelector(".input-pregunta");
+        if (!texto.value.trim()) {
+            V.marcarCampo(texto, "Escribe la pregunta " + n + ".");
+            return "La pregunta " + n + " está vacía. Escríbela antes de guardar.";
+        }
+        const puntos = bloque.querySelector(".input-puntos");
+        if (puntos.value === "" || Number.isNaN(Number(puntos.value)) || Number(puntos.value) < 1) {
+            V.marcarCampo(puntos, "El valor debe ser de al menos 1 punto.");
+            return "La pregunta " + n + " debe valer al menos 1 punto.";
+        }
+        if (bloque.querySelector(".select-tipo").value === "OPCION_MULTIPLE") {
+            const opciones = bloque.querySelectorAll(".input-opcion");
+            for (let j = 0; j < opciones.length; j++) {
+                if (!opciones[j].value.trim()) {
+                    V.marcarCampo(opciones[j], "Escribe esta opción.");
+                    return "La pregunta " + n + " tiene una opción vacía. Complétala antes de guardar.";
+                }
+            }
+            const letra = bloque.querySelector(".select-correcta").value;
+            const correcta = opciones[["A", "B", "C", "D"].indexOf(letra)];
+            if (!correcta || !correcta.value.trim()) {
+                V.marcarCampo(bloque.querySelector(".select-correcta"), "Elige una respuesta correcta con texto.");
+                return "La respuesta correcta de la pregunta " + n + " está vacía.";
+            }
+        }
+    }
+    return null;
+}
+
 // Guardar el examen en el Store y volver al detalle del curso
 formExamen.addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const V = window.Validacion;
+    V.limpiarError(formExamen);
 
+    const tituloInput = document.getElementById("examenTitulo");
+    const inicioInput = document.getElementById("examenInicio");
+    const finInput = document.getElementById("examenFin");
+    const titulo = tituloInput.value.trim();
+    if (!titulo) {
+        V.marcarCampo(tituloInput, "Escribe el título del examen.");
+        V.mostrarError(formExamen, "Escribe el título del examen.");
+        return;
+    }
+    // En edición el inicio puede estar en el pasado (examen ya abierto);
+    // solo se exige que el fin sea posterior al inicio.
+    const errorFechas = examenEditar
+        ? (inicioInput.value && finInput.value && new Date(finInput.value).getTime() <= new Date(inicioInput.value).getTime()
+            ? "La fecha de fin debe ser posterior a la de inicio." : null)
+        : V.validarRangoFechas(inicioInput.value, finInput.value, "inicio", "fin");
+    if (errorFechas) {
+        V.marcarCampo(finInput, errorFechas);
+        V.mostrarError(formExamen, errorFechas);
+        return;
+    }
     const preguntas = leerPreguntas();
-    if (preguntas.length === 0) {
+    const errorPreguntas = validarPreguntas();
+    if (errorPreguntas) {
+        V.mostrarError(formExamen, errorPreguntas);
         return;
     }
 
     const datosExamen = {
-        titulo: document.getElementById("examenTitulo").value.trim(),
-        fecha_inicio: document.getElementById("examenInicio").value,
-        fecha_fin: document.getElementById("examenFin").value
+        titulo: titulo,
+        fecha_inicio: inicioInput.value,
+        fecha_fin: finInput.value
     };
 
     if (examenEditar) {
         // actualizar el examen y sincronizar sus preguntas.
-        await Store.actualizarExamen(idExamen, datosExamen);
+        const actualizado = await Store.actualizarExamen(idExamen, datosExamen);
+        if (!V.siFalloMostrar(formExamen, actualizado, "No se pudo guardar los cambios del examen. Inténtalo de nuevo.")) {
+            return;
+        }
         const idsEnviados = new Set();
+        let falloPregunta = false;
         for (const p of preguntas) {
             if (p.id_pregunta) {
                 idsEnviados.add(p.id_pregunta);
-                await Store.actualizarPregunta(p.id_pregunta, p);
+                const guardada = await Store.actualizarPregunta(p.id_pregunta, p);
+                if (!guardada) falloPregunta = true;
             } else {
                 const creada = await Store.agregarPregunta(idExamen, p);
                 if (creada) idsEnviados.add(creada.id_pregunta);
+                else falloPregunta = true;
             }
+        }
+        if (falloPregunta) {
+            V.mostrarError(formExamen, "El examen se guardó, pero una pregunta no se pudo guardar. Revisa las preguntas e inténtalo de nuevo.");
+            return;
         }
         const guardadas = await Store.preguntasDeExamen(idExamen);
         for (const p of guardadas) {
             if (!idsEnviados.has(p.id_pregunta)) await Store.eliminarPregunta(p.id_pregunta);
         }
     } else {
-        await Store.crearExamen(idCurso, {
+        const creado = await Store.crearExamen(idCurso, {
             titulo: datosExamen.titulo,
             fecha_inicio: datosExamen.fecha_inicio,
             fecha_fin: datosExamen.fecha_fin,
             preguntas: preguntas
         });
+        if (!V.siFalloMostrar(formExamen, creado, "No se pudo crear el examen. Revisa las fechas y las preguntas e inténtalo de nuevo.")) {
+            return;
+        }
     }
     window.location.href = "curso-detalle.html?id=" + idCurso;
 });

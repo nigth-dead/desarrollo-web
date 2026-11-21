@@ -32,10 +32,12 @@ function renderEncabezado() {
         btnRegenerar.addEventListener("click", async () => {
             const codigo = await Store.regenerarCodigo(idCurso);
             if (!codigo) {
+                window.mostrarToast("No se pudo regenerar el código. Inténtalo de nuevo.");
                 return;
             }
             curso.codigo_invitacion = codigo;
             renderEncabezado();
+            window.Validacion.mostrarExito("Código regenerado.");
         });
     }
 }
@@ -290,14 +292,24 @@ document.getElementById("btnCargaMasiva").addEventListener("click", () => abrirD
 // Inscribir alumno
 document.getElementById("formInscribirAlumno").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    const email = document.getElementById("emailAlumno").value;
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const emailInput = document.getElementById("emailAlumno");
+    const email = emailInput.value.trim();
+    if (!V.esEmail(email)) {
+        V.marcarCampo(emailInput, "Escribe un correo válido.");
+        V.mostrarError(form, "Escribe un correo válido para inscribir al alumno.");
+        return;
+    }
     const resultado = await Store.inscribirAlumno(idCurso, email);
-    if (!resultado.ok) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo inscribir al alumno. Revisa el correo e inténtalo de nuevo.")) {
         return;
     }
     await renderAlumnos();
     evento.target.reset();
     cerrarDialogo("dialogoInscribir");
+    V.mostrarExito("Alumno inscrito.");
 });
 
 // Carga masiva
@@ -314,37 +326,92 @@ archivoXlsx.addEventListener("change", () => {
 
 document.getElementById("formCargaMasiva").addEventListener("submit", (evento) => {
     evento.preventDefault();
-    const nombre = archivoXlsx.files.length > 0 ? archivoXlsx.files[0].name : "";
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    if (archivoXlsx.files.length === 0) {
+        V.mostrarError(form, "Selecciona un archivo .xlsx para la carga masiva.");
+        return;
+    }
+    const nombre = archivoXlsx.files[0].name;
     evento.target.reset();
     nombreArchivo.textContent = "Ningún archivo seleccionado";
     cerrarDialogo("dialogoCarga");
+    V.mostrarExito("Archivo " + nombre + " seleccionado para la carga masiva.");
 });
 
 // Crear tarea
 document.getElementById("formTarea").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.crearTarea(idCurso, {
-        titulo: document.getElementById("tareaTitulo").value,
-        descripcion: document.getElementById("tareaDescripcion").value,
-        fecha_programada: document.getElementById("tareaFechaProgramada").value,
-        fecha_limite: document.getElementById("tareaFechaLimite").value,
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const tituloInput = document.getElementById("tareaTitulo");
+    const descripcionInput = document.getElementById("tareaDescripcion");
+    const programadaInput = document.getElementById("tareaFechaProgramada");
+    const limiteInput = document.getElementById("tareaFechaLimite");
+    const titulo = tituloInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!titulo) {
+        V.marcarCampo(tituloInput, "Escribe el título de la tarea.");
+        V.mostrarError(form, "Escribe el título de la tarea.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción de la tarea.");
+        V.mostrarError(form, "Escribe una descripción de la tarea.");
+        return;
+    }
+    const errorFechas = V.validarRangoFechas(programadaInput.value, limiteInput.value, "programada", "límite");
+    if (errorFechas) {
+        V.marcarCampo(limiteInput, errorFechas);
+        V.mostrarError(form, errorFechas);
+        return;
+    }
+    const creada = await Store.crearTarea(idCurso, {
+        titulo: titulo,
+        descripcion: descripcion,
+        fecha_programada: programadaInput.value,
+        fecha_limite: limiteInput.value,
         es_equipo: document.getElementById("tareaEsEquipo").checked
     });
+    if (!V.siFalloMostrar(form, creada, "No se pudo crear la tarea. Revisa las fechas e inténtalo de nuevo.")) {
+        return;
+    }
     await renderTodo();
     evento.target.reset();
     cerrarDialogo("dialogoTarea");
+    V.mostrarExito("Tarea creada.");
 });
 
 // Crear tema de foro
 document.getElementById("formTema").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.crearTema(idCurso, {
-        titulo: document.getElementById("temaTitulo").value,
-        descripcion: document.getElementById("temaDescripcion").value
-    });
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const tituloInput = document.getElementById("temaTitulo");
+    const descripcionInput = document.getElementById("temaDescripcion");
+    const titulo = tituloInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!titulo) {
+        V.marcarCampo(tituloInput, "Escribe el título del tema.");
+        V.mostrarError(form, "Escribe el título del tema.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción del tema.");
+        V.mostrarError(form, "Escribe una descripción del tema.");
+        return;
+    }
+    const creado = await Store.crearTema(idCurso, { titulo, descripcion });
+    if (!V.siFalloMostrar(form, creado, "No se pudo crear el tema. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderForos();
     evento.target.reset();
     cerrarDialogo("dialogoTema");
+    V.mostrarExito("Tema creado.");
 });
 
 // Comentar en un foro
@@ -355,8 +422,15 @@ document.getElementById("listaForos").addEventListener("submit", async (evento) 
     const idForo = Number(tarjeta.dataset.foroId);
     const textarea = evento.target.querySelector("textarea");
     const contenido = textarea.value.trim();
-    if (!contenido) return;
-    await Store.comentarForo(idForo, contenido);
+    if (!contenido) {
+        window.Validacion.marcarCampo(textarea, "Escribe un comentario.");
+        window.Validacion.mostrarError(evento.target, "Escribe un comentario antes de enviarlo.");
+        return;
+    }
+    const publicado = await Store.comentarForo(idForo, contenido);
+    if (!window.Validacion.siFalloMostrar(evento.target, publicado, "No se pudo publicar el comentario. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderForos();
 });
 
@@ -383,7 +457,15 @@ document.getElementById("listaForos").addEventListener("click", async (evento) =
     }
     const botonEliminarForo = evento.target.closest("[data-eliminar-foro]");
     if (botonEliminarForo) {
-        await Store.eliminarForo(Number(botonEliminarForo.dataset.eliminarForo));
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar este tema y sus comentarios? Esta acción no se puede deshacer.", "Eliminar");
+        if (!confirmado) return;
+        const eliminado = await Store.eliminarForo(Number(botonEliminarForo.dataset.eliminarForo));
+        if (!eliminado) {
+            window.mostrarToast("No se pudo eliminar el tema. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Tema eliminado.");
         await renderForos();
         return;
     }
@@ -400,10 +482,15 @@ document.getElementById("listaForos").addEventListener("click", async (evento) =
     }
     const botonEliminarComentario = evento.target.closest("[data-eliminar-comentario]");
     if (botonEliminarComentario) {
+        const confirmado = await window.Validacion.confirmar(
+            "¿Eliminar este comentario?", "Eliminar");
+        if (!confirmado) return;
         const resultado = await Store.eliminarComentario(Number(botonEliminarComentario.dataset.eliminarComentario));
         if (!resultado.ok) {
+            window.mostrarToast(resultado.error || "No se pudo eliminar el comentario.");
             return;
         }
+        window.Validacion.mostrarExito("Comentario eliminado.");
         await renderForos();
         return;
     }
@@ -411,32 +498,69 @@ document.getElementById("listaForos").addEventListener("click", async (evento) =
 
 document.getElementById("formEditarTema").addEventListener("submit", async (evento) => {
     evento.preventDefault();
-    await Store.actualizarForo(Number(document.getElementById("editarForoId").value), {
-        titulo: document.getElementById("editarForoTitulo").value,
-        descripcion: document.getElementById("editarForoDescripcion").value
-    });
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const tituloInput = document.getElementById("editarForoTitulo");
+    const descripcionInput = document.getElementById("editarForoDescripcion");
+    const titulo = tituloInput.value.trim();
+    const descripcion = descripcionInput.value.trim();
+    if (!titulo) {
+        V.marcarCampo(tituloInput, "Escribe el título del tema.");
+        V.mostrarError(form, "Escribe el título del tema.");
+        return;
+    }
+    if (!descripcion) {
+        V.marcarCampo(descripcionInput, "Escribe una descripción del tema.");
+        V.mostrarError(form, "Escribe una descripción del tema.");
+        return;
+    }
+    const actualizado = await Store.actualizarForo(Number(document.getElementById("editarForoId").value), { titulo, descripcion });
+    if (!V.siFalloMostrar(form, actualizado, "No se pudo guardar los cambios del tema. Inténtalo de nuevo.")) {
+        return;
+    }
     await renderForos();
     cerrarDialogo("dialogoEditarTema");
+    V.mostrarExito("Tema actualizado.");
 });
 
 document.getElementById("formEditarComentario").addEventListener("submit", async (evento) => {
     evento.preventDefault();
+    const form = evento.target;
+    const V = window.Validacion;
+    V.limpiarError(form);
+    const contenidoInput = document.getElementById("editarComentarioContenido");
+    const contenido = contenidoInput.value.trim();
+    if (!contenido) {
+        V.marcarCampo(contenidoInput, "Escribe el comentario.");
+        V.mostrarError(form, "Escribe el comentario.");
+        return;
+    }
     const resultado = await Store.actualizarComentario(
         Number(document.getElementById("editarComentarioId").value),
-        document.getElementById("editarComentarioContenido").value
+        contenido
     );
-    if (!resultado.ok) {
+    if (!V.siFalloMostrar(form, resultado, "No se pudo guardar el comentario. Inténtalo de nuevo.")) {
         return;
     }
     await renderForos();
     cerrarDialogo("dialogoEditarComentario");
+    V.mostrarExito("Comentario actualizado.");
 });
 
 // Exámenes: eliminar
 document.getElementById("listaExamenes").addEventListener("click", async (evento) => {
     const botonEliminar = evento.target.closest("[data-eliminar-examen]");
     if (!botonEliminar) return;
-    await Store.eliminarExamen(Number(botonEliminar.dataset.eliminarExamen));
+    const confirmado = await window.Validacion.confirmar(
+        "¿Eliminar este examen? También se eliminarán sus preguntas y resultados.", "Eliminar");
+    if (!confirmado) return;
+    const eliminado = await Store.eliminarExamen(Number(botonEliminar.dataset.eliminarExamen));
+    if (!eliminado) {
+        window.mostrarToast("No se pudo eliminar el examen. Inténtalo de nuevo.");
+        return;
+    }
+    window.Validacion.mostrarExito("Examen eliminado.");
     await renderExamenes();
 });
 
@@ -444,10 +568,15 @@ document.getElementById("listaExamenes").addEventListener("click", async (evento
 document.getElementById("listaAlumnos").addEventListener("click", async (evento) => {
     const botonBaja = evento.target.closest("[data-dar-baja]");
     if (!botonBaja) return;
+    const confirmado = await window.Validacion.confirmar(
+        "¿Dar de baja a este alumno del curso?", "Dar de baja");
+    if (!confirmado) return;
     const resultado = await Store.darDeBajaAlumno(idCurso, Number(botonBaja.dataset.darBaja));
     if (!resultado.ok) {
+        window.mostrarToast(resultado.error || "No se pudo dar de baja al alumno.");
         return;
     }
+    window.Validacion.mostrarExito("Alumno dado de baja.");
     await renderAlumnos();
 });
 })();

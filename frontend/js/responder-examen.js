@@ -232,6 +232,14 @@
 
     async function enviarRespuestas(automatico) {
         if (enviado) return;
+        if (!automatico) {
+            const sinResponder = preguntas.length - contarRespondidas();
+            const texto = sinResponder > 0
+                ? "Tienes " + sinResponder + " pregunta(s) sin responder. ¿Enviar el examen de todas formas?"
+                : "¿Enviar el examen? Ya no podrás modificar tus respuestas.";
+            const confirmado = await window.Validacion.confirmar(texto, "Enviar");
+            if (!confirmado) return;
+        }
         enviado = true;
         clearInterval(intervalo);
         const resultado = await Store.responderExamen(idExamen, recogerRespuestas());

@@ -229,10 +229,17 @@
         const puntaje = Number(puntajeInput.value);
 
         if (puntajeInput.value === "" || Number.isNaN(puntaje) || puntaje < 0 || puntaje > max) {
+            window.Validacion.marcarCampo(puntajeInput, "El puntaje debe estar entre 0 y " + max + ".");
+            window.mostrarToast("El puntaje debe estar entre 0 y " + max + ".");
             return;
         }
 
-        await Store.calificarRespuesta(id, puntaje, comentarioInput.value.trim());
+        const guardada = await Store.calificarRespuesta(id, puntaje, comentarioInput.value.trim());
+        if (!guardada) {
+            window.mostrarToast("No se pudo guardar la calificación. Inténtalo de nuevo.");
+            return;
+        }
+        window.Validacion.mostrarExito("Calificación guardada.");
         await cargarDatos();
         await renderizarResultados();
     });

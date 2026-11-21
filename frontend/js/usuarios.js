@@ -46,8 +46,15 @@
         const botonEliminar = evento.target.closest("[data-eliminar-id]");
         if (botonEliminar) {
             const id = Number(botonEliminar.dataset.eliminarId);
+            const confirmado = await window.Validacion.confirmar(
+                "¿Eliminar este usuario? Esta acción no se puede deshacer.", "Eliminar");
+            if (!confirmado) return;
             const resultado = await Store.eliminarUsuario(id);
-            if (!resultado.ok) return;
+            if (!resultado.ok) {
+                window.mostrarToast(resultado.error || "No se pudo eliminar el usuario.");
+                return;
+            }
+            window.Validacion.mostrarExito("Usuario eliminado.");
             await renderUsuarios();
             return;
         }
@@ -71,16 +78,42 @@
 
     formEditar.addEventListener("submit", async (evento) => {
         evento.preventDefault();
+        const V = window.Validacion;
+        V.limpiarError(formEditar);
+        const nombreInput = document.getElementById("editarUsuarioNombre");
+        const emailInput = document.getElementById("editarUsuarioEmail");
+        const passwordInput = document.getElementById("editarUsuarioPassword");
+        const nombre = nombreInput.value.trim();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        if (nombre.length < 2) {
+            V.marcarCampo(nombreInput, "El nombre debe tener al menos 2 caracteres.");
+            V.mostrarError(formEditar, "Revisa el nombre: debe tener al menos 2 caracteres.");
+            return;
+        }
+        if (!V.esEmail(email)) {
+            V.marcarCampo(emailInput, "Escribe un correo válido.");
+            V.mostrarError(formEditar, "Revisa el correo: debe tener un formato válido.");
+            return;
+        }
+        if (password && password.length < 6) {
+            V.marcarCampo(passwordInput, "La contraseña nueva debe tener al menos 6 caracteres.");
+            V.mostrarError(formEditar, "La contraseña nueva debe tener al menos 6 caracteres.");
+            return;
+        }
         const id = Number(document.getElementById("editarUsuarioId").value);
         const resultado = await Store.actualizarUsuario(id, {
-            nombre: document.getElementById("editarUsuarioNombre").value,
-            email: document.getElementById("editarUsuarioEmail").value,
-            password: document.getElementById("editarUsuarioPassword").value,
+            nombre: nombre,
+            email: email,
+            password: password,
             rol: document.getElementById("editarUsuarioRol").value
         });
-        if (!resultado.ok) return;
+        if (!V.siFalloMostrar(formEditar, resultado, "No se pudo guardar los cambios del usuario. Inténtalo de nuevo.")) {
+            return;
+        }
         dialogoEditar.close();
         await renderUsuarios();
+        V.mostrarExito("Usuario actualizado.");
     });
 
     // Diálogo de carga masiva
@@ -127,16 +160,39 @@
                 errores.push(`Fila ${i + 1}: faltan datos.`);
                 continue;
             }
-            const resultado = await Store.registrarUsuario({ nombre, email, password: password || "demo", rol });
+            if (nombre.length < 2) {
+                errores.push(`Fila ${i + 1} (${email}): el nombre debe tener al menos 2 caracteres.`);
+                continue;
+            }
+            if (!window.Validacion.esEmail(email)) {
+                errores.push(`Fila ${i + 1} (${email}): correo no válido.`);
+                continue;
+            }
+            if (rol && !["ALUMNO", "MAESTRO", "ADMIN"].includes(rol.toUpperCase())) {
+                errores.push(`Fila ${i + 1} (${email}): rol no válido (usa ALUMNO, MAESTRO o ADMIN).`);
+                continue;
+            }
+            const resultado = await Store.registrarUsuario({ nombre, email, password: password || "demo", rol: rol ? rol.toUpperCase() : rol });
             if (resultado.ok) creados++;
             else errores.push(`Fila ${i + 1} (${email}): ${resultado.error}`);
         }
         return { creados, errores };
     }
 
-    async function mostrarResumen() {
+    async function mostrarResumen(creados, errores) {
         await renderUsuarios();
-        dialogo.close();
+        let resumen = document.getElementById("resumenMasiva");
+        if (!resumen) {
+            resumen = document.createElement("div");
+            resumen.id = "resumenMasiva";
+            form.querySelector(".dialogo-cuerpo").appendChild(resumen);
+        }
+        const conError = (errores || []).length;
+        resumen.innerHTML = "<p><strong>" + creados + " creados, " + conError + " con error.</strong></p>" +
+            (conError > 0
+                ? "<ul>" + errores.map((e) => "<li>" + Store.escaparHTML(e) + "</li>").join("") + "</ul>"
+                : "<p>Todos los usuarios se crearon sin errores.</p>");
+        if (conError === 0 && creados > 0) window.Validacion.mostrarExito("Se crearon " + creados + " usuarios.");
     }
 
     async function procesarCSV(texto) {
@@ -148,11 +204,12 @@
             filas.push(partes);
         });
         const { creados, errores } = await importarFilas(filas);
-        await mostrarResumen();
+        await mostrarResumen(creados, errores);
     }
 
     async function procesarExcel(buffer) {
         if (typeof XLSX === "undefined") {
+            window.Validacion.mostrarError(form, "No se pudo cargar el lector de Excel (SheetJS). Guarda el archivo como CSV e inténtalo de nuevo.");
             return;
         }
         const libro = XLSX.read(buffer, { type: "array" });
@@ -184,13 +241,21 @@
             filas.push([celdas[idx.nombre] || "", celdas[idx.email] || "", celdas[idx.password] || "", celdas[idx.rol] || ""]);
         });
         const { creados, errores } = await importarFilas(filas);
-        await mostrarResumen();
+        await mostrarResumen(creados, errores);
     }
 
     form.addEventListener("submit", (evento) => {
         evento.preventDefault();
+        window.Validacion.limpiarError(form);
         const archivo = archivoInput.files[0];
-        if (!archivo) return;
+        if (!archivo) {
+            window.Validacion.mostrarError(form, "Selecciona un archivo .xlsx, .xls o .csv para importar.");
+            return;
+        }
+        if (!/\.(xlsx|xls|csv)$/i.test(archivo.name)) {
+            window.Validacion.mostrarError(form, "El archivo debe ser .xlsx, .xls o .csv.");
+            return;
+        }
         const nombre = archivo.name.toLowerCase();
         if (nombre.endsWith(".xlsx") || nombre.endsWith(".xls")) {
             archivo.arrayBuffer().then(procesarExcel);

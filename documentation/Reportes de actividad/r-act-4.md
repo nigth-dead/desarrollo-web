@@ -68,7 +68,7 @@ Describir brevemente la contribución de cada integrante.
 Indicar las tareas que se realizarán antes del siguiente reporte.
 
 - Actividad 1 Luis David Sosa Fernández: Corregir defectos
-- Actividad 2 Edgar Alejandro Cortes Martinez: Completar README
+- Actividad 2 Edgar Alejandro Cortes Martinez: Completar README y preparar evidencias
 - Actividad 3 Héctor Manuel Toral Huerta: Verificar ejecucion en WSL
 - Actividad 4 Kendar Emanuel Strop Garcia: Probar casos de exito y error
 

@@ -633,3 +633,17 @@ table.tabla {
     border-radius: 9px;
     padding: 10px 12px;
 }
+
+/*Error junto a un campo concreto*/
+.campo-error {
+    display: block;
+    color: #fda4af;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+/*Campo marcado como inválido (se limpia al escribir de nuevo)*/
+.campo-invalido {
+    border-color: #dc2626 !important;
+    outline: 2px solid rgba(220, 38, 38, 0.35);
+}

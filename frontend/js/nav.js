@@ -35,8 +35,9 @@
     }
     if (dialogoConfirmar.open) dialogoConfirmar.close();
   }
-  window.pedirConfirmacion = function (texto) {
+  window.pedirConfirmacion = function (texto, etiqueta) {
     document.getElementById("textoConfirmar").textContent = texto;
+    document.getElementById("btnConfirmarSi").textContent = etiqueta || "Confirmar";
     dialogoConfirmar.showModal();
     return new Promise(function (resolver) { resolverConfirmacion = resolver; });
   };
