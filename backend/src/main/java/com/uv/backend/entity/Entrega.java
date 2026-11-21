@@ -44,6 +44,9 @@ public class Entrega {
     @Column(name = "archivo_url", length = 500)
     private String archivoUrl;
 
+    @Column(name = "descripcion", columnDefinition = "TEXT")
+    private String descripcion;
+
     @Column(name = "fecha_entrega", updatable = false)
     private LocalDateTime fechaEntrega;
 
@@ -108,6 +111,14 @@ public class Entrega {
 
     public void setArchivoUrl(String archivoUrl) {
         this.archivoUrl = archivoUrl;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     public LocalDateTime getFechaEntrega() {

@@ -43,6 +43,9 @@ public class Prorroga {
     @Column(name = "aprobada")
     private Boolean aprobada;
 
+    @Column(name = "justificacion", columnDefinition = "TEXT")
+    private String justificacion;
+
     /**
      * Constructor vacío obligatorio para JPA/Hibernate.
      */
@@ -106,5 +109,13 @@ public class Prorroga {
 
     public void setAprobada(Boolean aprobada) {
         this.aprobada = aprobada;
+    }
+
+    public String getJustificacion() {
+        return justificacion;
+    }
+
+    public void setJustificacion(String justificacion) {
+        this.justificacion = justificacion;
     }
 }

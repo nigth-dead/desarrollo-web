@@ -1,7 +1,8 @@
 package com.uv.backend.controller;
 
 import com.uv.backend.entity.Usuario;
-import com.uv.backend.repository.UsuarioRepository;
+import com.uv.backend.repository.IUsuario;
+import com.uv.backend.service.Filtros;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +21,10 @@ public class UsuarioController {
 
     private static final Set<String> ROLES = Set.of("MAESTRO", "ALUMNO", "ADMIN");
 
-    private final UsuarioRepository usuarioRepository;
+    private final IUsuario iUsuario;
 
-    public UsuarioController(UsuarioRepository usuarioRepository) {
-        this.usuarioRepository = usuarioRepository;
+    public UsuarioController(IUsuario iUsuario) {
+        this.iUsuario = iUsuario;
     }
 
     // Datos que llegan en el POST
@@ -32,10 +33,10 @@ public class UsuarioController {
     // Datos para editar (PUT /usuarios/{id}): solo los campos no null se actualizan
     public record UsuarioEditRequest(String nombre, String email, String rol) {}
 
-    // Datos para cambiar contraseña (PUT /usuarios/{id}/password)
+    // Datos para cambiar contraseña (PATCH /usuarios/{id}/password)
     public record PasswordRequest(String password) {}
 
-    // Datos para cambiar rol (PUT /usuarios/{id}/rol)
+    // Datos para cambiar rol (PATCH /usuarios/{id}/rol)
     public record RolRequest(String rol) {}
 
     // Datos que se devuelven (sin la contrasena)
@@ -45,14 +46,24 @@ public class UsuarioController {
         }
     }
 
+    // Listar usuarios. Filtros: ?rol= (MAESTRO/ALUMNO/ADMIN), ?q= (nombre o email)
     @GetMapping
-    public List<UsuarioResponse> listar() {
-        return usuarioRepository.findAll().stream().map(UsuarioResponse::de).toList();
+    public ResponseEntity<?> listar(@RequestParam(required = false) String rol,
+            @RequestParam(required = false) String q) {
+        if (rol != null && !ROLES.contains(rol.toUpperCase())) {
+            return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
+        }
+        List<UsuarioResponse> usuarios = iUsuario.findAll().stream()
+                .filter(u -> rol == null || u.getRol().equalsIgnoreCase(rol))
+                .filter(u -> Filtros.contiene(q, u.getNombre(), u.getEmail()))
+                .map(UsuarioResponse::de)
+                .toList();
+        return ResponseEntity.ok(usuarios);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponse> obtener(@PathVariable Integer id) {
-        return usuarioRepository.findById(id)
+        return iUsuario.findById(id)
                 .map(u -> ResponseEntity.ok(UsuarioResponse.de(u)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -66,7 +77,7 @@ public class UsuarioController {
         if (!ROLES.contains(rol)) {
             return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
         }
-        if (usuarioRepository.existsByEmail(req.email())) {
+        if (iUsuario.existsByEmail(req.email())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("El email ya esta registrado");
         }
 
@@ -75,15 +86,15 @@ public class UsuarioController {
         u.setEmail(req.email());
         u.setPasswordHash(sha256(req.password()));
         u.setRol(rol);
-        Usuario guardado = usuarioRepository.save(u);
+        Usuario guardado = iUsuario.save(u);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.de(guardado));
     }
 
     // Editar usuario (PUT /usuarios/{id})
     @PutMapping("/{id}")
-    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody UsuarioEditRequest req) {
-        var opt = usuarioRepository.findById(id);
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody UsuarioEditRequest req) {
+        var opt = iUsuario.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -92,7 +103,7 @@ public class UsuarioController {
             u.setNombre(req.nombre());
         }
         if (req.email() != null && !req.email().isBlank() && !req.email().equals(u.getEmail())) {
-            if (usuarioRepository.existsByEmail(req.email())) {
+            if (iUsuario.existsByEmail(req.email())) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("El email ya esta registrado");
             }
             u.setEmail(req.email());
@@ -102,29 +113,32 @@ public class UsuarioController {
             if (!ROLES.contains(rol)) {
                 return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
             }
+            if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
+            }
             u.setRol(rol);
         }
-        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+        return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
-    // Cambiar contraseña (PUT /usuarios/{id}/password; en el documento era PATCH)
-    @PutMapping("/{id}/password")
+    // Cambiar contraseña (PATCH /usuarios/{id}/password)
+    @PatchMapping("/{id}/password")
     public ResponseEntity<?> cambiarPassword(@PathVariable Integer id, @RequestBody PasswordRequest req) {
         if (vacio(req.password())) {
             return ResponseEntity.badRequest().body("password es obligatorio");
         }
-        var opt = usuarioRepository.findById(id);
+        var opt = iUsuario.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Usuario u = opt.get();
         u.setPasswordHash(sha256(req.password()));
-        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+        return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
-    // Cambiar rol (PUT /usuarios/{id}/rol; en el documento era PATCH)
-    @PutMapping("/{id}/rol")
-    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestBody RolRequest req) {
+    // Cambiar rol (PATCH /usuarios/{id}/rol)
+    @PatchMapping("/{id}/rol")
+    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody RolRequest req) {
         if (vacio(req.rol())) {
             return ResponseEntity.badRequest().body("rol es obligatorio");
         }
@@ -132,22 +146,25 @@ public class UsuarioController {
         if (!ROLES.contains(rol)) {
             return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
         }
-        var opt = usuarioRepository.findById(id);
+        var opt = iUsuario.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Usuario u = opt.get();
+        if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
+        }
         u.setRol(rol);
-        return ResponseEntity.ok(UsuarioResponse.de(usuarioRepository.save(u)));
+        return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
     // Eliminar usuario (DELETE /usuarios/{id})
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        if (!usuarioRepository.existsById(id)) {
+        if (!iUsuario.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        usuarioRepository.deleteById(id);
+        iUsuario.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -155,7 +172,7 @@ public class UsuarioController {
         return s == null || s.isBlank();
     }
 
-    private static String sha256(String texto) {
+    static String sha256(String texto) {
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(texto.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);

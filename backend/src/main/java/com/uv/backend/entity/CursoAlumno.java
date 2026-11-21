@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -33,7 +35,8 @@ public class CursoAlumno {
     @JoinColumn(name = "id_alumno")
     private Usuario alumno;
 
-    @Column(name = "fecha_inscripcion", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "fecha_inscripcion", updatable = false)
     private LocalDateTime fechaInscripcion;
 
     /**

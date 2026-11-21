@@ -2,13 +2,18 @@ package com.uv.backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.util.List;
+
+import com.uv.backend.entity.ExamenResultado;
 import com.uv.backend.entity.RespuestaAlumno;
+import com.uv.backend.repository.IExamenResultado;
 import com.uv.backend.repository.IRespuestaAlumno;
 import com.uv.backend.repository.IUsuario;
 
@@ -30,7 +35,7 @@ public class RespuestaAlumnoController {
     }
 
     //calificar respuesta abierta
-    @PutMapping ("/respuestas/{id}")
+    @PatchMapping ("/respuestas/{id}")
     public RespuestaAlumno calificarRespuesta(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody RespuestaAlumno respuestaNueva) {
@@ -48,6 +53,26 @@ public class RespuestaAlumnoController {
             respuestaBase.setComentarioMaestro(respuestaNueva.getComentarioMaestro());
         }
         iRespuestaAlumno.save(respuestaBase);
+        recalcularResultado(respuestaBase.getResultado());
         return respuestaBase;
+    }
+
+    @Autowired
+    IExamenResultado iExamenResultado;
+
+    //cuando todas las respuestas del examen ya tienen puntaje, el resultado pasa a CALIFICADO
+    //y la calificacion final es la suma de los puntajes
+    private void recalcularResultado(ExamenResultado resultado) {
+        List<RespuestaAlumno> respuestas = iRespuestaAlumno.findByResultadoIdResultado(resultado.getIdResultado());
+        boolean todasCalificadas = respuestas.stream().allMatch(r -> r.getPuntajeObtenido() != null);
+        if (!todasCalificadas) {
+            return;
+        }
+        BigDecimal total = respuestas.stream()
+                .map(RespuestaAlumno::getPuntajeObtenido)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        resultado.setCalificacionFinal(total);
+        resultado.setEstadoRevision("CALIFICADO");
+        iExamenResultado.save(resultado);
     }
 }

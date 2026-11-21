@@ -1,5 +1,9 @@
 package com.uv.backend.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -30,6 +34,7 @@ public class Usuario {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -39,7 +44,8 @@ public class Usuario {
     @Column(name = "rol", nullable = false, length = 50)
     private String rol;
 
-    @Column(name = "fecha_registro", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "fecha_registro", updatable = false)
     private LocalDateTime fechaRegistro;
 
     /**
