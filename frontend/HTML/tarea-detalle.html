@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de la tarea | LMS</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/tarea-detalle.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform" id="contenidoTarea">
+        <a class="volver" id="volverCurso" href="cursos.html">&larr; Volver al curso</a>
+
+        <!-- Encabezado de la tarea -->
+        <section class="apartado" id="encabezadoTarea"></section>
+
+        <!-- Barra de pestañas -->
+        <div class="tabs" id="barraPestanasTarea" role="tablist">
+            <button type="button" data-pestana="entregas" class="activo">Entregas</button>
+            <button type="button" data-pestana="equipos">Equipos</button>
+            <button type="button" data-pestana="prorrogas">Prórrogas</button>
+        </div>
+
+        <!-- Entregas -->
+        <section class="apartado" data-pestana="entregas">
+            <div class="apartado-encabezado">
+                <h2>Entregas</h2>
+                <button type="button" class="btn btn-primario" id="btnEntregar">Entregar</button>
+            </div>
+            <div id="listaEntregas" class="lista-tarjetas"></div>
+        </section>
+
+        <!-- Equipos -->
+        <section class="apartado" data-pestana="equipos" hidden>
+            <div class="apartado-encabezado">
+                <h2>Equipos</h2>
+                <button type="button" class="btn btn-primario" id="btnCrearEquipo">Crear equipo</button>
+            </div>
+            <div id="listaEquipos" class="lista-tarjetas"></div>
+        </section>
+
+        <!-- Prórrogas -->
+        <section class="apartado" data-pestana="prorrogas" hidden>
+            <div class="apartado-encabezado">
+                <h2>Prórrogas</h2>
+                <button type="button" class="btn btn-secundario" id="btnSolicitarProrroga">Solicitar prórroga</button>
+            </div>
+            <div id="listaProrrogas" class="lista-tarjetas"></div>
+        </section>
+    </main>
+
+    <!-- Entregar tarea -->
+    <dialog id="dialogoEntrega" class="dialogo">
+        <form id="formEntrega">
+            <div class="dialogo-encabezado">
+                <h3>Entregar tarea</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEntrega" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="entregaTareaId">
+                <div id="grupoEquipoEntrega" hidden>
+                    <label for="entregaEquipo">Equipo</label>
+                    <select id="entregaEquipo"></select>
+                </div>
+                <label for="entregaArchivo">Archivo</label>
+                <input type="file" id="entregaArchivo">
+                <label for="entregaArchivoUrl">O URL del archivo</label>
+                <input type="text" id="entregaArchivoUrl" placeholder="https://...">
+                <p class="texto-ayuda">Sube un archivo o pega un enlace válido (que empiece con http:// o https://).</p>
+                <label for="entregaDescripcion">Descripción</label>
+                <textarea id="entregaDescripcion" rows="3" placeholder="Describe brevemente lo que entregas..."></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEntrega">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Entregar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar entrega (cambiar el archivo) -->
+    <dialog id="dialogoEditarEntrega" class="dialogo">
+        <form id="formEditarEntrega">
+            <div class="dialogo-encabezado">
+                <h3>Editar entrega</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEditarEntrega" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarEntregaId">
+                <label for="editarEntregaArchivo">Archivo</label>
+                <input type="file" id="editarEntregaArchivo">
+                <label for="editarEntregaArchivoUrl">O URL del archivo</label>
+                <input type="text" id="editarEntregaArchivoUrl" placeholder="https://...">
+                <label for="editarEntregaDescripcion">Descripción</label>
+                <textarea id="editarEntregaDescripcion" rows="3" placeholder="Describe brevemente lo que entregas..."></textarea>
+                <p class="texto-ayuda">Cambiar el archivo reinicia la calificación: el maestro tendrá que calificarlo de nuevo.</p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEditarEntrega">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Ver descripción completa -->
+    <dialog id="dialogoDescripcion" class="dialogo">
+        <div class="dialogo-encabezado">
+            <h3>Descripción de la entrega</h3>
+            <button type="button" class="btn-cerrar" data-cerrar="dialogoDescripcion" aria-label="Cerrar">X</button>
+        </div>
+        <div class="dialogo-cuerpo">
+            <pre id="descripcionTexto" style="white-space: pre-wrap; word-break: break-word; font-family: inherit; margin: 0;"></pre>
+        </div>
+        <div class="dialogo-pie">
+            <button type="button" class="btn btn-secundario" data-cerrar="dialogoDescripcion">Cerrar</button>
+            <button type="button" class="btn btn-primario" id="btnDescargarDescripcion">Descargar .txt</button>
+        </div>
+    </dialog>
+
+    <!-- Calificar entrega -->
+    <dialog id="dialogoCalificar" class="dialogo">
+        <form id="formCalificar">
+            <div class="dialogo-encabezado">
+                <h3>Calificar entrega</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoCalificar" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="calificarEntregaId">
+                <label for="calificarPuntaje">Calificación (0 - 100)</label>
+                <input type="number" id="calificarPuntaje" min="0" max="100" required>
+                <label for="calificarComentario">Comentario del maestro</label>
+                <textarea id="calificarComentario" rows="3"></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoCalificar">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar calificación</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Crear equipo -->
+    <dialog id="dialogoEquipo" class="dialogo">
+        <form id="formEquipo">
+            <div class="dialogo-encabezado">
+                <h3>Crear equipo</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEquipo" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="equipoNombre">Nombre del equipo</label>
+                <input type="text" id="equipoNombre" required>
+                <label>Integrantes</label>
+                <div id="contenedorIntegrantes"></div>
+                <button type="button" class="btn btn-secundario btn-sm" id="btnAnadirIntegrante">Añadir integrante</button>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEquipo">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Crear equipo</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar equipo -->
+    <dialog id="dialogoEditarEquipo" class="dialogo">
+        <form id="formEditarEquipo">
+            <div class="dialogo-encabezado">
+                <h3>Editar equipo</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEditarEquipo" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarEquipoId">
+                <label for="editarEquipoNombre">Nombre del equipo</label>
+                <input type="text" id="editarEquipoNombre" required>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEditarEquipo">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Agregar integrante a un equipo que ya existe -->
+    <dialog id="dialogoAgregarIntegrante" class="dialogo">
+        <form id="formAgregarIntegrante">
+            <div class="dialogo-encabezado">
+                <h3>Agregar integrante</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoAgregarIntegrante" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="agregarIntegranteEquipoId">
+                <label for="agregarIntegranteAlumno">Alumno</label>
+                <select id="agregarIntegranteAlumno" required></select>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoAgregarIntegrante">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Agregar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Solicitar prórroga -->
+    <dialog id="dialogoProrroga" class="dialogo">
+        <form id="formProrroga">
+            <div class="dialogo-encabezado">
+                <h3>Solicitar prórroga</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoProrroga" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="prorrogaTareaId">
+                <div id="grupoEquipoProrroga" hidden>
+                    <label for="prorrogaEquipo">Equipo</label>
+                    <select id="prorrogaEquipo"></select>
+                </div>
+                <label for="prorrogaNuevaFecha">Nueva fecha límite</label>
+                <input type="datetime-local" id="prorrogaNuevaFecha" required>
+                <label for="prorrogaJustificacion">Justificación</label>
+                <textarea id="prorrogaJustificacion" rows="3" placeholder="Explica por qué necesitas más tiempo..." required></textarea>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoProrroga">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Solicitar prórroga</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar tarea -->
+    <dialog id="dialogoEditarTarea" class="dialogo">
+        <form id="formEditarTarea">
+            <div class="dialogo-encabezado">
+                <h3>Editar tarea</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogoEditarTarea" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="editarTareaTitulo">Título</label>
+                <input type="text" id="editarTareaTitulo" required>
+                <label for="editarTareaDescripcion">Descripción</label>
+                <textarea id="editarTareaDescripcion" rows="3" required></textarea>
+                <label for="editarTareaFechaProgramada">Fecha programada</label>
+                <input type="datetime-local" id="editarTareaFechaProgramada" required>
+                <label for="editarTareaFechaLimite">Fecha límite</label>
+                <input type="datetime-local" id="editarTareaFechaLimite" required>
+                <label class="campo-checkbox">
+                    <input type="checkbox" id="editarTareaEsEquipo"> Es tarea en equipo
+                </label>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogoEditarTarea">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/tarea-detalle.js"></script>
+</body>
+</html>

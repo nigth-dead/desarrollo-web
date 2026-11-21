@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis cursos</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/cursos.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform">
+        <h1>Mis cursos</h1>
+
+        <div class="barra-acciones">
+            <button type="button" class="btn btn-primario" id="btnCrearCurso">Crear curso</button>
+            <button type="button" class="btn btn-secundario" id="btnUnirseCodigo">Unirse con código</button>
+        </div>
+
+        <div id="listaCursos" class="lista-tarjetas"></div>
+    </main>
+
+    <!-- Crear curso -->
+    <dialog id="dialogCrear" class="dialogo">
+        <form id="formCrearCurso">
+            <div class="dialogo-encabezado">
+                <h3>Crear curso</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogCrear" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="crearNombre">Nombre del curso</label>
+                <input type="text" id="crearNombre" name="nombre" required>
+
+                <label for="crearDescripcion">Descripción</label>
+                <textarea id="crearDescripcion" name="descripcion" rows="4" required></textarea>
+
+                <p class="nota">El código de invitación se genera automáticamente en el sistema.</p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogCrear">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Crear curso</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar curso -->
+    <dialog id="dialogEditar" class="dialogo">
+        <form id="formEditarCurso">
+            <div class="dialogo-encabezado">
+                <h3>Editar curso</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogEditar" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarId" name="id">
+
+                <label for="editarNombre">Nombre del curso</label>
+                <input type="text" id="editarNombre" name="nombre" required>
+
+                <label for="editarDescripcion">Descripción</label>
+                <textarea id="editarDescripcion" name="descripcion" rows="4" required></textarea>
+
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogEditar">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Unirse con código -->
+    <dialog id="dialogUnirse" class="dialogo">
+        <form id="formUnirseCodigo">
+            <div class="dialogo-encabezado">
+                <h3>Unirse con código</h3>
+                <button type="button" class="btn-cerrar" data-cerrar="dialogUnirse" aria-label="Cerrar">X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <label for="codigoInvitacion">Código de invitación</label>
+                <input type="text" id="codigoInvitacion" name="codigo_invitacion" placeholder="Código de invitación" required>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar="dialogUnirse">Cancelar</button>
+                <button type="submit" class="btn btn-primario">Unirse al curso</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/cursos.js"></script>
+</body>
+</html>

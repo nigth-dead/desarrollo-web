@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calificar examen</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/calificar-examen.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform">
+        <a class="volver" id="enlaceVolver" href="cursos.html">&larr; Volver a Mis cursos</a>
+
+        <div id="accesoDenegado" hidden></div>
+
+        <div id="contenidoCalificar">
+            <section class="apartado encabezado-examen">
+                <h1>Calificar examen</h1>
+                <p><strong>Examen:</strong> <span id="nombreExamen"></span></p>
+                <p><strong>Curso:</strong> <span id="nombreCurso"></span></p>
+                <div class="contadores">
+                    <span class="contador contador-pendientes">Pendientes: <strong id="contadorPendientes">0</strong></span>
+                    <span class="contador contador-calificadas">Calificadas: <strong id="contadorCalificadas">0</strong></span>
+                </div>
+            </section>
+
+            <div class="filtros">
+                <button type="button" class="btn-filtro activo" data-filtro="TODAS">Todas</button>
+                <button type="button" class="btn-filtro" data-filtro="PENDIENTE_MANUAL">Pendientes</button>
+                <button type="button" class="btn-filtro" data-filtro="CALIFICADO">Calificadas</button>
+            </div>
+
+            <section class="apartado">
+                <h2>Preguntas del examen</h2>
+                <div id="tablaPreguntas"></div>
+            </section>
+
+            <section id="listaResultados" class="lista-resultados"></section>
+
+            <p id="mensajeVacio" class="mensaje-vacio" hidden>No hay exámenes en esta categoría.</p>
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/calificar-examen.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios · LMS Desarrollo Web</title>
+    <link rel="stylesheet" href="../CSS/main.css">
+    <link rel="stylesheet" href="../CSS/usuarios.css">
+</head>
+<body>
+    <header id="encabezadoSistema" class="encabezado-sistema"></header>
+
+    <main class="contform">
+        <h1>Usuarios</h1>
+        <div class="barra-acciones">
+            <a class="btn btn-primario" href="registro.html">Registrar usuario</a>
+            <button type="button" class="btn btn-secundario" id="btnAbrirMasiva">Carga masiva (.xlsx)</button>
+        </div>
+
+        <div class="lista-tarjetas" id="listaUsuarios"></div>
+    </main>
+
+    <dialog class="dialogo" id="dialogoMasiva">
+        <div class="dialogo-encabezado">
+            <h3>Carga masiva de usuarios</h3>
+            <button type="button" class="btn-cerrar" data-cerrar>X</button>
+        </div>
+        <form id="formMasiva">
+            <div class="dialogo-cuerpo">
+                <p>Sube un archivo con las cuentas a crear. Formato por fila: <strong>nombre, email, password, rol</strong> (rol: ALUMNO o MAESTRO).</p>
+                <p class="nota">La carga lee archivos <strong>.xlsx</strong> y <strong>.csv</strong>. Para .xlsx se usa la librería SheetJS desde internet; sin conexión, guarda el Excel como CSV (Archivo → Guardar como → CSV).</p>
+                <label for="archivoMasiva">Archivo (.xlsx o .csv)</label>
+                <input type="file" id="archivoMasiva" accept=".xlsx,.xls,.csv" required>
+                <p class="texto-ayuda" id="nombreArchivoMasiva"></p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" id="btnPlantilla">Descargar plantilla</button>
+                <button type="button" class="btn btn-secundario" data-cerrar>Cancelar</button>
+                <button type="submit" class="btn btn-primario">Importar usuarios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Editar usuario-->
+    <dialog class="dialogo" id="dialogoEditarUsuario">
+        <form id="formEditarUsuario">
+            <div class="dialogo-encabezado">
+                <h3>Editar usuario</h3>
+                <button type="button" class="btn-cerrar" data-cerrar>X</button>
+            </div>
+            <div class="dialogo-cuerpo">
+                <input type="hidden" id="editarUsuarioId">
+                <label for="editarUsuarioNombre">Nombre completo</label>
+                <input type="text" id="editarUsuarioNombre" required>
+                <label for="editarUsuarioEmail">Correo</label>
+                <input type="email" id="editarUsuarioEmail" required>
+                <label for="editarUsuarioPassword">Contraseña nueva</label>
+                <input type="password" id="editarUsuarioPassword" placeholder="Dejar vacía para no cambiarla">
+                <label for="editarUsuarioRol">Rol</label>
+                <select id="editarUsuarioRol" required>
+                    <option value="ALUMNO">Alumno</option>
+                    <option value="MAESTRO">Maestro</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+                <p class="nota" id="notaRolPropio" hidden>No puedes cambiar tu propio rol.</p>
+            </div>
+            <div class="dialogo-pie">
+                <button type="button" class="btn btn-secundario" data-cerrar>Cancelar</button>
+                <button type="submit" class="btn btn-primario">Guardar cambios</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/store.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="../js/usuarios.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+h1 {
+    margin: 0 0 8px 0;
+    font-size: 26px;
+}
+
+.tarjeta .acciones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.fila-integrante {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.fila-integrante select {
+    flex: 1;
+}
