@@ -8,11 +8,20 @@ document.getElementById("formRegistro").addEventListener("submit", async (evento
     const rol = document.getElementById("registroRol").value;
 
     if (password !== password2) {
+        mostrarToast("Las contraseñas no coinciden.");
         return;
     }
 
     const resultado = await Store.registrarUsuario({ nombre, email, password, rol });
-    if (resultado.ok) {
-        window.location.href = "usuarios.html";
+
+    if (!resultado.ok) {
+        mostrarToast("No se pudo registrar: " + resultado.error);
+        return;
     }
+
+    mostrarToast("Usuario registrado exitosamente.");
+
+    setTimeout(function () {
+        window.location.href = "usuarios.html";
+    }, 1500);
 });
