@@ -1,0 +1,67 @@
+.encabezado-examen h1 {
+    margin: 0 0 8px 0;
+    font-size: 26px;
+    color: var(--ink);
+}
+
+.encabezado-examen p {
+    margin: 6px 0;
+    color: var(--ink2);
+}
+
+.tiempo {
+    font-size: 18px;
+}
+
+#tiempoRestante {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+#tiempoRestante.poco-tiempo {
+    color: #f87171;
+}
+
+#progreso {
+    font-weight: 700;
+}
+
+.pregunta-encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.pregunta-encabezado h3 {
+    margin: 0;
+    color: var(--ink);
+}
+
+.puntos {
+    color: var(--primary);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.opcion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--card2);
+    border: 1px solid var(--input-line);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 0 0 8px 0;
+    cursor: pointer;
+    font-weight: 400;
+}
+
+.opcion:hover {
+    border-color: var(--primary);
+}
+
+.opcion input[type="radio"] {
+    width: auto;
+}

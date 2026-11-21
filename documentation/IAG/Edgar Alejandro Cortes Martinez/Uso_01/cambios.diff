@@ -1,0 +1,90 @@
+diff --git a/frontend/CSS/main.css b/frontend/CSS/main.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/main.css
+@@ -0,0 +1,649 @@
++/* Todo el contenido de main.css generado por la IA: */
++/* variables, encabezado, tarjetas, botones, formularios, */
++/* diálogos, badges, tabs, tablas, toast, errores y responsive. */
++/* Ver el archivo completo en codigo_despues/main.css */
+
+diff --git a/frontend/CSS/login.css b/frontend/CSS/login.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/login.css
+@@ -0,0 +1,33 @@
++/* Todo el contenido de login.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/login.css */
+
+diff --git a/frontend/CSS/registro.css b/frontend/CSS/registro.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/registro.css
+@@ -0,0 +1,5 @@
++/* Todo el contenido de registro.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/registro.css */
+
+diff --git a/frontend/CSS/cursos.css b/frontend/CSS/cursos.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/cursos.css
+@@ -0,0 +1,3 @@
++/* Todo el contenido de cursos.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/cursos.css */
+
+diff --git a/frontend/CSS/curso-detalle.css b/frontend/CSS/curso-detalle.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/curso-detalle.css
+@@ -0,0 +1,62 @@
++/* Todo el contenido de curso-detalle.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/curso-detalle.css */
+
+diff --git a/frontend/CSS/tarea-detalle.css b/frontend/CSS/tarea-detalle.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/tarea-detalle.css
+@@ -0,0 +1,21 @@
++/* Todo el contenido de tarea-detalle.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/tarea-detalle.css */
+
+diff --git a/frontend/CSS/crear-examen.css b/frontend/CSS/crear-examen.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/crear-examen.css
+@@ -0,0 +1,16 @@
++/* Todo el contenido de crear-examen.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/crear-examen.css */
+
+diff --git a/frontend/CSS/calificar-examen.css b/frontend/CSS/calificar-examen.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/calificar-examen.css
+@@ -0,0 +1,113 @@
++/* Todo el contenido de calificar-examen.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/calificar-examen.css */
+
+diff --git a/frontend/CSS/responder-examen.css b/frontend/CSS/responder-examen.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/responder-examen.css
+@@ -0,0 +1,67 @@
++/* Todo el contenido de responder-examen.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/responder-examen.css */
+
+diff --git a/frontend/CSS/usuarios.css b/frontend/CSS/usuarios.css
+new file mode 100644
+--- /dev/null
++++ b/frontend/CSS/usuarios.css
+@@ -0,0 +1,3 @@
++/* Todo el contenido de usuarios.css generado por la IA. */
++/* Ver el archivo completo en codigo_despues/usuarios.css */
+
+-- Resumen (git diff --numstat, solo estilo) --
+-- 10 archivos nuevos en frontend/CSS/, 972 líneas en total.
+-- main.css 649, calificar-examen.css 113, responder-examen.css 67,
+-- curso-detalle.css 62, login.css 33, tarea-detalle.css 21,
+-- crear-examen.css 16, registro.css 5, cursos.css 3, usuarios.css 3.
+-- Código anterior: sin CSS, elementos sin estilos.
+-- Código posterior: todo el CSS en codigo_despues/ y en codigo_despues.css.
+-- Sin cambios en frontend/js/, frontend/HTML/, backend/ ni database/.
