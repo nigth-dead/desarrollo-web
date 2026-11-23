@@ -1,4 +1,4 @@
-# Reporte de Avance del Proyecto — BORRADOR (como si ya se hubiera acabado)
+# Reporte de Avance del Proyecto
 
 **Equipo:** 2
 **Fecha:** 22/11/2026
@@ -20,10 +20,6 @@ Desde el reporte 4 se completó la Entregable 5, la versión candidata del siste
   pruebas del backend y enlaces a los commits de cada integrante.
 - Se verificó la ejecución en WSL siguiendo solo el README: clonar el repo, crear
   la base de datos, arrancar el backend y el frontend, y probar el flujo completo.
-- Se grabó el video de demostración en YouTube (15-20 minutos, los 4 integrantes,
-  cámara abierta, no listado).
-- Se armó el PDF de documentación final (portada, introducción, problemática,
-  enlaces y arquitectura).
 
 ---
 
@@ -73,7 +69,7 @@ Desde el reporte 4 se completó la Entregable 5, la versión candidata del siste
 
 **Pendientes:**
 - PDF de documentacion final
-
+- Grabacion de video explicativo
 ---
 
 # 5. Uso de IA generativa
