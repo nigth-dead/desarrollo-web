@@ -12,7 +12,7 @@
 Desde el reporte 4 se completó la Entregable 5, la versión candidata del sistema:
 
 - Se probaron los casos de éxito y de error del backend con el script de pruebas
-  en PowerShell (`pruebas-lms-con-token.ps1`, con token JWT) y con la batería de
+  en PowerShell (`run-pruebas-lms.sh`, con token JWT) y con la batería de
   curl (`documentation/API_documentation/pruebas-api.sh`).
 - Se corrigieron los defectos encontrados en esas pruebas.
 - Se completó el README con las instrucciones para reproducir el proyecto en WSL.
@@ -31,7 +31,7 @@ Desde el reporte 4 se completó la Entregable 5, la versión candidata del siste
 | Preparar evidencias | Edgar Alejandro Cortes Martinez | https://github.com/nigth-dead/desarrollo-web/commit/e6d7e92b4e63c4352dcd3e24389181cc33819fbc |
 | Corregir defectos | Luis David Sosa Fernández | [enlace al commit] |
 | Verificar ejecución en WSL | Héctor Manuel Toral Huerta | [enlace al commit] |
-| Probar casos de éxito y error | Kendar Emmanuel Strop Garcia | [enlace al commit] |
+| Probar casos de éxito y error | Kendar Emmanuel Strop Garcia | https://github.com/nigth-dead/desarrollo-web/commit/86b9ce67cd8580a3c86577782f29c2ade118cfcb   |
 
 ---
 
@@ -77,7 +77,7 @@ Desde el reporte 4 se completó la Entregable 5, la versión candidata del siste
 Documentar el uso de herramientas de inteligencia artificial durante el desarrollo del proyecto.
 
 
----No se uso IA generativa
+-Se hizo uso de IAGen para las pruebas de exito y error, se anexó el script generado para la prueba y se señaló en la documentacion.
 
 # 6. Participación individual
 
