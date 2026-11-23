@@ -1,6 +1,6 @@
 # desarrollo-web
 
-Sistema LMS (Learn Management System),
+Sistema LMS (Learning Management System),
 con backend en Spring Boot, base de datos MySQL y frontend en HTML/CSS/JavaScript
 que consume la API con fetch.
 
@@ -22,27 +22,17 @@ cd desarrollo-web
 
 ## 2. Crear la base de datos
 
-En MySQL, ejecutar el script [script de la base de datos](database/SCRIPT-BASE.sql), que crea la base `lms_db` y el usuario de la aplicación con permisos de acceso remoto y local:
+En MySQL dentro de windows, ejecutar el script [script de la base de datos](database/SCRIPT-BASE.sql), que crea la base `lms_db` y el usuario de la aplicación con permisos de acceso remoto y local:
 
 ```bash
 mysql -u root -p < database/SCRIPT-BASE.sql
 ```
 
-Las tablas se creano o actualizan solas al arrancar el backend (`spring.jpa.hibernate.ddl-auto=update`).
+En Windows, ese comando se corre en CMD (en PowerShell el `<` no funciona). También se puede ejecutar el script desde MySQL Workbench.
 
-## 3. Configurar el backend
+Las tablas se crean o actualizan solas al arrancar el backend (`spring.jpa.hibernate.ddl-auto=update`).
 
-El backend lee el host de MySQL de la variable de entorno `BASE_DATOS`.
-En WSL, con MySQL en la misma máquina:
-
-```bash
-export BASE_DATOS=localhost
-```
-
-El secreto JWT es opcional: si no se define `JWT_SECRETO`, el backend usa su valor
-de desarrollo. Para una prueba tal cual, no hace falta definirlo.
-
-## 4. Arrancar el backend
+## 3. Configurar y arrancar el backend
 
 Desde la terminal de Windows, ver la IP de WiFi:
 
@@ -51,6 +41,9 @@ ipconfig
 ```
 
 Copiar la dirección IPv4 del adaptador de WiFi.
+
+El backend lee el host de MySQL de la variable de entorno `BASE_DATOS`.
+`BASE_DATOS` debe ser la IP de WiFi de la máquina, obtenida con `ipconfig`
 
 Luego, en la terminal de WSL, desde la carpeta `backend/`:
 
@@ -62,9 +55,12 @@ export BASE_DATOS='192.168.1.XX'
 
 Reemplazar `192.168.1.XX` por la IP obtenida con `ipconfig`.
 
+El secreto JWT es opcional: si no se define `JWT_SECRETO`, el backend usa su valor
+de desarrollo.
+
 El backend queda en `http://localhost:8081` y la API en `http://localhost:8081/api`.
 
-## 5. Arrancar el frontend
+## 4. Arrancar el frontend
 
 El frontend es estático y apunta a `http://localhost:8081/api`. 
 
@@ -78,9 +74,9 @@ python3 -m http.server 5500
 Y abrir `http://localhost:5500/index.html`. 
 
 
-## 6. Probar el flujo
+## 5. Probar el flujo
 
-### 6.1 Primero: entrar como administrador
+### 5.1 Primero: entrar como administrador
 
 Al arrancar el backend por primera vez se crea solo el usuario administrador:
 
@@ -90,14 +86,14 @@ Al arrancar el backend por primera vez se crea solo el usuario administrador:
 
 Iniciar sesión con ese usuario en `index.html`. El login guarda el token y lo envía en las peticiones a la API.
 
-### 6.2 Crear los usuarios de prueba
+### 5.2 Crear los usuarios de prueba
 
-Desde el formulario de registro (`registro.html`), crear un usuario con rol `MAESTRO` y otro con rol `ALUMNO`, eligiendo el rol en el propio formulario. Si las contraseñas no coinciden, muestra el aviso; al registrarse bien, muestra "Usuario registrado exitosamente." y redirige a `usuarios.html`, donde el administrador puede ver, editar y eliminar usuarios.
+Desde el formulario de registro (`HTML/registro.html`), crear un usuario con rol `MAESTRO` y otro con rol `ALUMNO`, eligiendo el rol en el propio formulario. Si las contraseñas no coinciden, muestra el aviso; al registrarse bien, muestra "Usuario registrado exitosamente." y redirige a `HTML/usuarios.html`, donde el administrador puede ver, editar y eliminar usuarios.
 
-### 6.3 Casos de uso para probar
+### 5.3 Casos de uso para probar
 
 **Como administrador:**
-- Ver la lista de usuarios, editar sus datos y su rol, y eliminar usuarios en `usuarios.html`.
+- Ver la lista de usuarios, editar sus datos y su rol, y eliminar usuarios en `HTML/usuarios.html`.
 
 **Como maestro:**
 - Iniciar sesión con el usuario `MAESTRO`.
