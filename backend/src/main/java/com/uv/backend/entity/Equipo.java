@@ -1,5 +1,11 @@
 package com.uv.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.OneToMany;
+
+import jakarta.persistence.CascadeType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,6 +46,15 @@ public class Equipo {
             joinColumns = @JoinColumn(name = "id_equipo"),
             inverseJoinColumns = @JoinColumn(name = "id_alumno"))
     private List<Usuario> integrantes = new ArrayList<>();
+
+    // Entregas y prorrogas del equipo: se borran junto con el equipo
+    @JsonIgnore
+    @OneToMany(mappedBy = "equipo", cascade = CascadeType.REMOVE)
+    private List<Entrega> entregas = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "equipo", cascade = CascadeType.REMOVE)
+    private List<Prorroga> prorrogas = new ArrayList<>();
 
     /**
      * Constructor vacío obligatorio para JPA/Hibernate.

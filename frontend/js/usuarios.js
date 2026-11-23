@@ -172,7 +172,16 @@
                 errores.push(`Fila ${i + 1} (${email}): rol no válido (usa ALUMNO, MAESTRO o ADMIN).`);
                 continue;
             }
-            const resultado = await Store.registrarUsuario({ nombre, email, password: password || "demo", rol: rol ? rol.toUpperCase() : rol });
+            // Sin contraseña no se crea la cuenta (antes se ponía "demo" a todas, una contraseña adivinable)
+            if (!password) {
+                errores.push(`Fila ${i + 1} (${email}): falta la contraseña.`);
+                continue;
+            }
+            if (password.length < 6) {
+                errores.push(`Fila ${i + 1} (${email}): la contraseña debe tener al menos 6 caracteres.`);
+                continue;
+            }
+            const resultado = await Store.registrarUsuario({ nombre, email, password, rol: rol ? rol.toUpperCase() : rol });
             if (resultado.ok) creados++;
             else errores.push(`Fila ${i + 1} (${email}): ${resultado.error}`);
         }

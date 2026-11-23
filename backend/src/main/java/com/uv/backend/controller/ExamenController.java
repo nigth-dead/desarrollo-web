@@ -42,15 +42,15 @@ public class ExamenController {
 
     //editar examen
     @PutMapping ("/examenes/{id}")
-    public Examen editarExamen(@PathVariable Integer id,
+    public ResponseEntity<?> editarExamen(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody Examen examenNuevo) {
         if (!iExamen.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El examen no existe");
         }
         Examen examenBase = iExamen.findById(id).get();
         if (!tienePermiso(examenBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         if (examenNuevo.getTitulo() != null) {
             examenBase.setTitulo(examenNuevo.getTitulo());
@@ -62,25 +62,25 @@ public class ExamenController {
             examenBase.setFechaFin(examenNuevo.getFechaFin());
         }
         iExamen.save(examenBase);
-        return examenBase;
+        return ResponseEntity.ok(examenBase);
     }
 
     //eliminar examen
     @DeleteMapping ("/examenes/{id}")
-    public String eliminarExamen(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarExamen(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iExamen.existsById(id)) {
-            return "El examen no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El examen no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
         Examen examenBase = iExamen.findById(id).get();
         if (!tienePermiso(examenBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         iExamen.deleteById(id);
-        return "Examen eliminado";
+        return ResponseEntity.ok("Examen eliminado");
     }
 
     // ===== GET y POST =====

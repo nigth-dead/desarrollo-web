@@ -88,7 +88,7 @@
             <tr data-id="${x.id_respuesta}">
                 <td class="celda-texto" data-campo="pregunta.pregunta">${Store.escaparHTML(x.pregunta ? x.pregunta.pregunta : "")}</td>
                 <td class="celda-texto" data-campo="respuestaDada">${Store.escaparHTML(x.respuesta_dada)}</td>
-                <td data-campo="puntajeObtenido"><input type="number" id="puntaje-${x.id_respuesta}" class="input-puntaje" min="0" max="${maxPuntos}" value="${puntajeValor}"> / ${maxPuntos}</td>
+                <td data-campo="puntajeObtenido"><input type="number" id="puntaje-${x.id_respuesta}" class="input-puntaje" min="0" max="${maxPuntos}" step="0.01" value="${puntajeValor}"> / ${maxPuntos}</td>
                 <td data-campo="comentarioMaestro"><textarea id="comentario-${x.id_respuesta}" class="input-comentario" rows="2" placeholder="Comentario para el alumno...">${Store.escaparHTML(x.comentario_maestro || "")}</textarea></td>
                 <td class="acciones">
                     <button type="button" class="btn btn-primario btn-sm" data-guardar-respuesta="${x.id_respuesta}">Guardar</button>

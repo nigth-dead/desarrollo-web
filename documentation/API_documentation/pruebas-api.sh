@@ -46,6 +46,7 @@ req POST /auth/login '{"email":"ana@uv.mx","password":"123456"}' 200 "login corr
 req POST /auth/login '{"email":"juan@uv.mx","password":"123456"}' 200 "login maestro"; TOK[$M]=$(jget "['token']"); DEF=${TOK[$M]}
 req POST /auth/login '{"email":"beto@uv.mx","password":"123456"}' 200 "login alumno 2"; TOK[$A2]=$(jget "['token']")
 req POST /auth/login '{"email":"caro@uv.mx","password":"123456"}' 200 "login alumno 3"; TOK[$A3]=$(jget "['token']")
+req POST /auth/login '{"email":"admin@uv.mx","password":"admin123"}' 200 "login admin (creado al arrancar)"; AD=$(jget "['usuario']['idUsuario']"); TOK[$AD]=$(jget "['token']"); check "d['usuario']['rol']=='ADMIN'" "rol ADMIN"
 req POST /auth/login '{"email":"ana@uv.mx","password":"mal"}' 401 "password incorrecta"
 req POST /auth/login '{"email":"nadie@uv.mx","password":"123456"}' 401 "email inexistente"
 req GET "/auth/me?idUsuario=$A1" "" 200 "mis datos"; check "d['email']=='ana@uv.mx'" "me devuelve al usuario correcto"
@@ -59,21 +60,33 @@ TOKEN="${TOK[$A1]%?}x"; req GET "/cursos" "" 401 "token con firma alterada"
 FALSO=$(python -c "import sys,base64,json; h,p,f=sys.argv[1].split('.'); d=json.loads(base64.urlsafe_b64decode(p+'==')); d['sub']=sys.argv[2]; q=base64.urlsafe_b64encode(json.dumps(d,separators=(',',':')).encode()).decode().rstrip('='); print(h+'.'+q+'.'+f)" "${TOK[$A1]}" "$M")
 TOKEN="$FALSO"; req GET "/cursos?idUsuario=$M" "" 401 "token con usuario cambiado (firma no coincide)"
 TOKEN=${TOK[$A1]}; req GET "/cursos?idUsuario=$M" "" 403 "alumno no puede usar el idUsuario del maestro"
-TOKEN="-"; req POST /auth/registro '{"nombre":"Libre","email":"libre@uv.mx","password":"123456","rol":"ALUMNO"}' 201 "registro no pide token"
+TOKEN="-"; req POST /auth/registro '{"nombre":"Libre","email":"libre@uv.mx","password":"123456","rol":"ALUMNO"}' 201 "registro no pide token"; LB=$(jget "['idUsuario']")
+req POST /auth/login '{"email":"libre@uv.mx","password":"123456"}' 200 "login alumno libre"; TOK[$LB]=$(jget "['token']")
 H=$(curl -s -o /dev/null -D - -X OPTIONS "$API/cursos" -H "Origin: http://localhost:5500" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization")
 if echo "$H" | grep -qi "access-control-allow-origin: http://localhost:5500"; then PASS=$((PASS+1)); echo "OK   check: CORS permite http://localhost:5500"; else FAIL=$((FAIL+1)); echo "FAIL check: CORS localhost -> $H"; fi
 C2=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$API/cursos" -H "Origin: http://sitio-externo.com" -H "Access-Control-Request-Method: GET")
 if [ "$C2" = "403" ]; then PASS=$((PASS+1)); echo "OK   check: CORS bloquea otros sitios"; else FAIL=$((FAIL+1)); echo "FAIL check: CORS externo -> $C2"; fi
 
-echo "=== USUARIOS (ya existentes)"
-req POST /usuarios '{"nombre":"Admin","email":"admin@uv.mx","password":"123456","rol":"ADMIN"}' 201 "crear admin"; AD=$(jget "['idUsuario']")
-req POST /auth/login '{"email":"admin@uv.mx","password":"123456"}' 200 "login admin"; TOK[$AD]=$(jget "['token']")
-req GET /usuarios "" 200 "listar usuarios"; nopass; check "len(d)==6" "6 usuarios"
+echo "=== USUARIOS (permisos de ADMIN)"
+TOKEN=${TOK[$AD]}; req GET /usuarios "" 200 "admin lista usuarios"; nopass; check "len(d)==6" "6 usuarios"
+req GET /usuarios "" 403 "maestro no lista usuarios"
+TOKEN=${TOK[$A1]}; req POST /usuarios '{"nombre":"Hacker","email":"hacker@uv.mx","password":"123456","rol":"ADMIN"}' 403 "alumno no crea usuarios"
+TOKEN=${TOK[$A1]}; req PATCH "/usuarios/$A1/rol" '{"rol":"ADMIN"}' 403 "alumno no se da rol ADMIN"
+TOKEN=${TOK[$A1]}; req PUT "/usuarios/$A1" '{"rol":"ADMIN"}' 403 "alumno no cambia su rol con PUT"
+TOKEN=${TOK[$A1]}; req PATCH "/usuarios/$M/password" '{"password":"robada"}' 403 "alumno no cambia la password de otro"
+TOKEN=${TOK[$A1]}; req PUT "/usuarios/$M" '{"nombre":"Otro"}' 403 "alumno no edita a otro usuario"
+TOKEN=${TOK[$A1]}; req DELETE "/usuarios/$M" "" 403 "alumno no elimina usuarios"
+TOKEN=${TOK[$AD]}; req DELETE "/usuarios/$AD" "" 403 "admin no se elimina a si mismo"
+TOKEN=${TOK[$AD]}; req PATCH "/usuarios/$AD/rol" '{"rol":"ALUMNO"}' 403 "admin no cambia su propio rol"
+TOKEN=${TOK[$A1]}; req PUT "/usuarios/$A1" '{"nombre":"Ana Lopez"}' 200 "usuario edita su nombre"; check "d['nombre']=='Ana Lopez' and d['rol']=='ALUMNO'" "nombre cambiado, rol igual"
+TOKEN=${TOK[$AD]}; req POST /usuarios '{"nombre":"Profe Dos","email":"profe2@uv.mx","password":"123456","rol":"MAESTRO"}' 201 "admin crea maestro"; M2=$(jget "['idUsuario']")
+req POST /auth/login '{"email":"profe2@uv.mx","password":"123456"}' 200 "login maestro 2"; TOK[$M2]=$(jget "['token']")
+TOKEN=${TOK[$AD]}; req GET /usuarios "" 200 "admin lista usuarios"; check "len(d)==7" "7 usuarios"
 req GET "/usuarios/$M" "" 200 "ver usuario"
 
 echo "=== CURSOS"
 req POST /cursos "{\"nombre\":\"Desarrollo Web\",\"descripcion\":\"501\",\"idMaestro\":$M}" 201 "crear curso"; C=$(jget "['idCurso']"); COD=$(jget "['codigoInvitacion']"); nopass
-req POST /cursos "{\"nombre\":\"Otro\",\"idMaestro\":$A1}" 400 "alumno no puede ser maestro"
+TOKEN=${TOK[$AD]}; req POST /cursos "{\"nombre\":\"Otro\",\"idMaestro\":$A1}" 400 "alumno no puede ser maestro"
 req GET /cursos "" 200 "listar cursos"; nopass
 req GET "/cursos/$C" "" 200 "ver curso"; nopass
 req POST "/cursos/unirse?idUsuario=$A1" "{\"codigoInvitacion\":\"$COD\"}" 201 "alumno 1 se une"
@@ -84,11 +97,21 @@ req POST "/cursos/unirse?idUsuario=$M" "{\"codigoInvitacion\":\"$COD\"}" 403 "ma
 req POST "/cursos/unirse?idUsuario=$A1" '{"codigoInvitacion":"ZZZZZZ"}' 404 "codigo inexistente"
 req GET "/cursos?idUsuario=$M" "" 200 "mis cursos (maestro)"; check "len(d)==1" "maestro ve 1 curso"
 req GET "/cursos?idUsuario=$A1" "" 200 "mis cursos (alumno)"; check "len(d)==1 and d[0]['idCurso']==$C" "alumno ve su curso"
-req GET "/cursos/$C/alumnos?idUsuario=$A1" "" 200 "ver alumnos"; check "len(d)==3 and d[0]['alumno']['nombre']=='Ana' and d[0]['fechaInscripcion']" "3 inscripciones con alumno y fecha"; nopass
+req GET "/cursos/$C/alumnos?idUsuario=$A1" "" 200 "ver alumnos"; check "len(d)==3 and d[0]['alumno']['email']=='ana@uv.mx' and d[0]['fechaInscripcion']" "3 inscripciones con alumno y fecha"; nopass
 req GET "/cursos/$C/alumnos?idUsuario=$AD" "" 403 "no miembro no ve alumnos"
 req POST "/cursos/$C/codigo?idUsuario=$M" "" 200 "regenerar codigo"; check "d['codigoInvitacion']!='$COD'" "codigo cambio"
 req POST "/cursos/$C/codigo?idUsuario=$A1" "" 403 "alumno no regenera codigo"
 req GET "/cursos/999" "" 404 "curso inexistente"
+req POST /cursos "{\"nombre\":\"Ajeno\",\"idMaestro\":$M2}" 403 "maestro no crea cursos a nombre de otro"
+TOKEN=${TOK[$A1]}; req GET /cursos "" 200 "alumno sin idUsuario ve solo sus cursos"; check "len(d)==1 and d[0]['idCurso']==$C" "solo su curso"
+TOKEN=${TOK[$LB]}; req GET /cursos "" 200 "alumno sin cursos"; check "len(d)==0" "no ve codigos de otros cursos"
+TOKEN=${TOK[$LB]}; req GET "/cursos/$C" "" 403 "no miembro no ve el curso ni su codigo"
+TOKEN=${TOK[$AD]}; req GET "/cursos/$C" "" 200 "admin ve cualquier curso"
+TOKEN=${TOK[$A1]}; req PUT "/cursos/$C" '{"nombre":"Curso hackeado"}' 403 "alumno no edita el curso"
+TOKEN=${TOK[$A1]}; req DELETE "/cursos/$C" "" 403 "alumno no elimina el curso"
+TOKEN=${TOK[$A1]}; req DELETE "/cursos/$C/alumnos/$A3" "" 403 "alumno no da de baja a otro"
+TOKEN=${TOK[$M2]}; req PUT "/cursos/$C" '{"nombre":"X"}' 403 "otro maestro no edita el curso"
+req PUT "/cursos/$C" '{"nombre":"Desarrollo Web"}' 200 "maestro edita su curso"
 
 echo "=== TAREAS"
 req POST "/cursos/$C/tareas?idUsuario=$M" "{\"titulo\":\"Practica 1\",\"descripcion\":\"Form\",\"fechaLimite\":\"$SEMANA\",\"esEquipo\":false}" 201 "tarea individual"; T1=$(jget "['idTarea']")
@@ -114,7 +137,7 @@ echo "=== EQUIPOS"
 req POST "/tareas/$T2/equipos?idUsuario=$M" '{"nombreEquipo":"Equipo Rojo"}' 201 "crear equipo"; E1=$(jget "['idEquipo']")
 req POST "/tareas/$T2/equipos?idUsuario=$M" '{"nombreEquipo":"Equipo Azul"}' 201 "crear equipo 2"; E2=$(jget "['idEquipo']")
 req POST "/tareas/$T1/equipos?idUsuario=$M" '{"nombreEquipo":"X"}' 400 "tarea individual no lleva equipos"
-req POST "/tareas/$T2/equipos?idUsuario=$A1" '{"nombreEquipo":"X"}' 403 "alumno no crea equipos"
+req POST "/tareas/$T2/equipos?idUsuario=$LB" '{"nombreEquipo":"X"}' 403 "alumno no inscrito no crea equipos"
 req POST "/equipos/$E1/integrantes?idUsuario=$M" "{\"idsAlumnos\":[$A1,$A2]}" 201 "agregar integrantes"; check "len(d['integrantes'])==2" "2 integrantes"; nopass
 req POST "/equipos/$E2/integrantes?idUsuario=$M" "{\"idsAlumnos\":[$A2]}" 409 "alumno ya en otro equipo"
 req POST "/equipos/$E2/integrantes?idUsuario=$M" "{\"idsAlumnos\":[$AD]}" 400 "alumno no inscrito"
@@ -123,9 +146,10 @@ req GET "/equipos/$E1?idUsuario=$A1" "" 200 "ver equipo"
 
 echo "=== ENTREGAS"
 req POST "/tareas/$T1/entregas?idUsuario=$A1" '{"archivoUrl":"https://drive.example/p1-ana.zip"}' 201 "entrega individual"; EN1=$(jget "['idEntrega']"); check "d['alumno']['idUsuario']==$A1 and d['equipo'] is None" "se lleno id_alumno"; nopass
-req POST "/tareas/$T1/entregas?idUsuario=$A1" '{"archivoUrl":"x"}' 409 "no se entrega dos veces"
-req POST "/tareas/$T1/entregas?idUsuario=$M" '{"archivoUrl":"x"}' 403 "maestro no entrega"
+req POST "/tareas/$T1/entregas?idUsuario=$A1" '{"archivoUrl":"https://drive.example/x"}' 409 "no se entrega dos veces"
+req POST "/tareas/$T1/entregas?idUsuario=$M" '{"archivoUrl":"https://drive.example/x"}' 403 "maestro no entrega"
 req POST "/tareas/$T1/entregas?idUsuario=$A2" '{}' 400 "falta archivoUrl"
+req POST "/tareas/$T1/entregas?idUsuario=$A2" '{"archivoUrl":"no es un enlace"}' 400 "enlace invalido"
 req GET "/tareas/$T1/entregas/mia?idUsuario=$A1" "" 200 "mi entrega"
 req GET "/tareas/$T1/entregas/mia?idUsuario=$A2" "" 404 "aun no entrega"
 req GET "/tareas/$T1/entregas?idUsuario=$M" "" 200 "maestro ve entregas"; check "len(d)==1" "1 entrega"
@@ -135,20 +159,22 @@ req GET "/entregas/$EN1?idUsuario=$A2" "" 403 "otro alumno no ve entrega"
 req GET "/entregas/$EN1/archivo?idUsuario=$A1" "" 302 "descargar archivo (redirige)"
 req POST "/tareas/$T2/entregas?idUsuario=$A2" '{"archivoUrl":"https://drive.example/proyecto.zip"}' 201 "entrega por equipo"; check "d['equipo']['idEquipo']==$E1 and d['alumno'] is None" "se lleno id_equipo"; nopass
 req GET "/tareas/$T2/entregas/mia?idUsuario=$A1" "" 200 "companero ve la entrega del equipo"
-req POST "/tareas/$T2/entregas?idUsuario=$A1" '{"archivoUrl":"x"}' 409 "el equipo ya entrego"
-req POST "/tareas/$T2/entregas?idUsuario=$A3" '{"archivoUrl":"x"}' 400 "alumno sin equipo"
-req POST "/tareas/$T4/entregas?idUsuario=$A3" '{"archivoUrl":"x"}' 400 "fecha limite vencida"
+req POST "/tareas/$T2/entregas?idUsuario=$A1" '{"archivoUrl":"https://drive.example/x"}' 409 "el equipo ya entrego"
+req POST "/tareas/$T2/entregas?idUsuario=$A3" '{"archivoUrl":"https://drive.example/x"}' 400 "alumno sin equipo"
+req POST "/tareas/$T4/entregas?idUsuario=$A3" '{"archivoUrl":"https://drive.example/x"}' 400 "fecha limite vencida"
 
 echo "=== PRORROGAS"
-req POST "/tareas/$T4/prorrogas?idUsuario=$A3" "{\"nuevaFechaLimite\":\"$EN2D\"}" 201 "alumno solicita prorroga"; check "d['aprobada']==False" "queda pendiente"
-req POST "/tareas/$T4/entregas?idUsuario=$A3" '{"archivoUrl":"x"}' 400 "prorroga pendiente no habilita entrega"
+req POST "/tareas/$T4/prorrogas?idUsuario=$A3" "{\"nuevaFechaLimite\":\"$EN2D\"}" 400 "sin justificacion"
+req POST "/tareas/$T4/prorrogas?idUsuario=$A3" "{\"nuevaFechaLimite\":\"$EN2D\",\"justificacion\":\"Estuve enfermo\"}" 201 "alumno solicita prorroga"; check "not d['aprobada'] and d['justificacion']=='Estuve enfermo'" "queda pendiente con justificacion"
+req POST "/tareas/$T4/entregas?idUsuario=$A3" '{"archivoUrl":"https://drive.example/x"}' 400 "prorroga pendiente no habilita entrega"
 req POST "/tareas/$T4/prorrogas?idUsuario=$M" "{\"nuevaFechaLimite\":\"$EN3D\",\"idAlumno\":$A3}" 201 "maestro otorga prorroga"; check "d['aprobada']==True" "aprobada"
 req POST "/tareas/$T4/entregas?idUsuario=$A3" '{"archivoUrl":"https://drive.example/tarde.zip"}' 201 "entrega con prorroga aprobada"
-req POST "/tareas/$T4/prorrogas?idUsuario=$A1" "{\"nuevaFechaLimite\":\"$AYER\"}" 400 "nueva fecha no posterior"
-req POST "/tareas/$T4/prorrogas?idUsuario=$AD" "{\"nuevaFechaLimite\":\"$EN2D\"}" 403 "no miembro"
-req POST "/tareas/$T2/prorrogas?idUsuario=$A1" "{\"nuevaFechaLimite\":\"$(ts '+10 day')\"}" 201 "prorroga para el equipo"; check "d['equipo']['idEquipo']==$E1" "va al equipo"
+req POST "/tareas/$T4/prorrogas?idUsuario=$A1" "{\"nuevaFechaLimite\":\"$AYER\",\"justificacion\":\"x\"}" 400 "nueva fecha no posterior"
+req POST "/tareas/$T4/prorrogas?idUsuario=$AD" "{\"nuevaFechaLimite\":\"$EN2D\",\"justificacion\":\"x\"}" 403 "no miembro"
+req POST "/tareas/$T2/prorrogas?idUsuario=$A1" "{\"nuevaFechaLimite\":\"$(ts '+10 day')\",\"justificacion\":\"Falta un integrante\"}" 201 "prorroga para el equipo"; check "d['equipo']['idEquipo']==$E1" "va al equipo"
 req GET "/tareas/$T4/prorrogas?idUsuario=$M" "" 200 "maestro ve prorrogas"; check "len(d)==2" "2 prorrogas"
-req GET "/tareas/$T4/prorrogas?idUsuario=$A3" "" 403 "alumno no ve la lista"
+req GET "/tareas/$T4/prorrogas?idUsuario=$A3" "" 200 "alumno ve sus prorrogas"; check "len(d)==2 and all(p['alumno']['idUsuario']==$A3 for p in d)" "solo las suyas"
+req GET "/tareas/$T4/prorrogas?idUsuario=$A1" "" 200 "otro alumno"; check "len(d)==0" "no ve las de otros"
 
 echo "=== FOROS Y COMENTARIOS"
 req POST "/cursos/$C/foros?idUsuario=$M" '{"titulo":"Dudas","descripcion":"Pregunten aqui"}' 201 "crear foro"; F=$(jget "['idForo']")
@@ -194,16 +220,16 @@ req POST "/examenes/$X3/resultados?idUsuario=$A1" '{"respuestas":[]}' 400 "exame
 req POST "/examenes/$X1/resultados?idUsuario=$M" '{"respuestas":[]}' 403 "maestro no presenta"
 req GET "/examenes/$X2/resultados?idUsuario=$M" "" 200 "maestro ve resultados"; check "len(d)==2" "2 resultados"; nopass
 req GET "/examenes/$X2/resultados?idUsuario=$A1" "" 403 "alumno no ve todos"
-req GET "/examenes/$X1/resultados/mio?idUsuario=$A1" "" 200 "mi resultado"
+req GET "/examenes/$X1/resultados/mio?idUsuario=$A1" "" 200 "mi resultado"; check "all('respuestaCorrecta' not in r['pregunta'] for r in d['respuestas']) and all(r['pregunta']['valorPuntos'] for r in d['respuestas'])" "examen abierto: sin respuesta correcta, con valor de puntos"
 req GET "/examenes/$X1/resultados/mio?idUsuario=$A2" "" 404 "aun no presenta"
 req GET "/resultados/$R1?idUsuario=$A1" "" 200 "resultado propio con respuestas"; check "len(d['respuestas'])==2" "trae respuestas"
 req GET "/resultados/$R1?idUsuario=$M" "" 200 "maestro ve resultado"
 req GET "/resultados/$R1?idUsuario=$A2" "" 403 "otro alumno no ve resultado"
 
 echo "=== FILTROS"
-req GET "/usuarios?rol=alumno" "" 200 "usuarios por rol"; check "len(d)==4 and all(u['rol']=='ALUMNO' for u in d)" "4 alumnos"
-req GET "/usuarios?q=ANA" "" 200 "buscar usuario"; check "len(d)==1 and d[0]['email']=='ana@uv.mx'" "encuentra a Ana sin importar mayusculas"
-req GET "/usuarios?rol=JEFE" "" 400 "rol invalido"
+TOKEN=${TOK[$AD]}; req GET "/usuarios?rol=alumno" "" 200 "usuarios por rol"; check "len(d)==4 and all(u['rol']=='ALUMNO' for u in d)" "4 alumnos"
+TOKEN=${TOK[$AD]}; req GET "/usuarios?q=ANA" "" 200 "buscar usuario"; check "len(d)==1 and d[0]['email']=='ana@uv.mx'" "encuentra a Ana sin importar mayusculas"
+TOKEN=${TOK[$AD]}; req GET "/usuarios?rol=JEFE" "" 400 "rol invalido"
 req GET "/cursos?q=desarrollo" "" 200 "buscar curso"; check "len(d)==1" "1 curso"
 req GET "/cursos?q=python" "" 200 "buscar curso sin resultados"; check "len(d)==0" "0 cursos"
 req GET "/cursos?idUsuario=$A1&q=web" "" 200 "mis cursos + busqueda"; check "len(d)==1" "1 curso"
@@ -220,7 +246,7 @@ req GET "/tareas/$T1/entregas?idUsuario=$M&calificada=false" "" 200 "entregas si
 req GET "/tareas/$T1/entregas?idUsuario=$M&calificada=true" "" 200 "entregas calificadas"; check "len(d)==0" "0 calificadas"
 req GET "/tareas/$T4/entregas?idUsuario=$M&tarde=true" "" 200 "entregas tarde"; check "len(d)==1" "1 entregada tarde"
 req GET "/tareas/$T1/entregas?idUsuario=$M&tarde=true" "" 200 "entregas a tiempo no salen"; check "len(d)==0" "0 tarde"
-req GET "/tareas/$T4/prorrogas?idUsuario=$M&aprobada=false" "" 200 "prorrogas pendientes"; check "len(d)==1 and d[0]['aprobada']==False" "1 pendiente"
+req GET "/tareas/$T4/prorrogas?idUsuario=$M&aprobada=false" "" 200 "prorrogas pendientes"; check "len(d)==1 and not d[0]['aprobada']" "1 pendiente"
 req GET "/tareas/$T4/prorrogas?idUsuario=$M&aprobada=true" "" 200 "prorrogas aprobadas"; check "len(d)==1 and d[0]['aprobada']==True" "1 aprobada"
 req GET "/cursos/$C/foros?idUsuario=$A1&q=dud" "" 200 "buscar foro"; check "len(d)==1" "1 foro"
 req GET "/cursos/$C/foros?idUsuario=$A1&q=nada" "" 200 "buscar foro sin resultados"; check "len(d)==0" "0 foros"
@@ -249,12 +275,13 @@ req GET "/notificaciones?idUsuario=$A1" "" 200 "notificaciones"; check "all(n['f
 req GET "/resultados/$R1?idUsuario=$A1" "" 200 "resultado"; check "d['resultado']['fechaRealizacion'] is not None" "fechaRealizacion se guarda"
 
 echo "=== OBSERVACIONES: PATCH"
-req PATCH "/usuarios/$A3/password" '{"password":"nueva123"}' 200 "cambiar password"; nopass
+req PATCH "/usuarios/$A3/password" '{"password":"nueva123"}' 403 "maestro no cambia la password de un alumno"
+TOKEN=${TOK[$A3]}; req PATCH "/usuarios/$A3/password" '{"password":"nueva123"}' 200 "cambiar mi password"; nopass
 req POST /auth/login '{"email":"caro@uv.mx","password":"nueva123"}' 200 "login con la nueva password"
 req POST /auth/login '{"email":"caro@uv.mx","password":"123456"}' 401 "la password vieja ya no sirve"
 req PUT "/usuarios/$A3/password" '{"password":"x"}' 405 "PUT ya no se acepta en password"
-req PATCH "/usuarios/$AD/rol" '{"rol":"maestro"}' 200 "cambiar rol"; check "d['rol']=='MAESTRO'" "rol cambiado"
-req PATCH "/usuarios/$AD/rol" '{"rol":"ADMIN"}' 200 "regresar rol"
+TOKEN=${TOK[$AD]}; req PATCH "/usuarios/$LB/rol" '{"rol":"maestro"}' 200 "admin cambia rol"; check "d['rol']=='MAESTRO'" "rol cambiado"
+TOKEN=${TOK[$AD]}; req PATCH "/usuarios/$LB/rol" '{"rol":"ALUMNO"}' 200 "regresar rol"
 req PATCH "/entregas/$EN1/calificacion?idUsuario=$M" '{"calificacion":9.5,"comentarioMaestro":"Bien"}' 200 "calificar entrega"; check "float(d['calificacion'])==9.5 and d['comentarioMaestro']=='Bien'" "calificacion guardada"
 req PATCH "/entregas/$EN1/calificacion?idUsuario=$A1" '{"calificacion":10}' 403 "alumno no se califica"
 req PATCH "/entregas/$EN1/calificacion?idUsuario=$M" '{"calificacion":150}' 400 "calificacion fuera de rango"
@@ -266,6 +293,8 @@ req GET "/tareas/$T4/prorrogas?idUsuario=$M&aprobada=false" "" 200 "prorroga pen
 req PATCH "/prorrogas/$PR?idUsuario=$M" "{\"aprobada\":true,\"nuevaFechaLimite\":\"$EN2D\"}" 200 "aprobar prorroga (PATCH)"
 req GET "/tareas/$T4/prorrogas?idUsuario=$M&aprobada=false" "" 200 "ya no hay pendientes"; check "len(d)==0" "0 pendientes"
 req GET "/resultados/$R1?idUsuario=$M" "" 200 "respuestas del examen"; RA=$(python -c "import sys,json; d=json.loads(sys.argv[1]); print(next(r['idRespuesta'] for r in d['respuestas'] if r['puntajeObtenido'] is None))" "$BODY")
+req PATCH "/respuestas/$RA?idUsuario=$M" '{"puntajeObtenido":50}' 400 "puntaje mayor al valor de la pregunta"
+req PATCH "/respuestas/$RA?idUsuario=$M" '{"puntajeObtenido":-1}' 400 "puntaje negativo"
 req PATCH "/respuestas/$RA?idUsuario=$M" '{"puntajeObtenido":4,"comentarioMaestro":"Incompleta"}' 200 "calificar respuesta abierta (PATCH)"
 req GET "/resultados/$R1?idUsuario=$A1" "" 200 "resultado recalculado"; check "d['resultado']['estadoRevision']=='CALIFICADO' and float(d['resultado']['calificacionFinal'])==6.0" "pasa a CALIFICADO con 2+4=6"
 req GET "/notificaciones?idUsuario=$A1&leido=false" "" 200 "no leidas"; NID=$(jget "[0]['idNotificacion']"); NOL=$(python -c "import sys,json;print(len(json.loads(sys.argv[1])))" "$BODY")
@@ -274,6 +303,69 @@ req GET "/notificaciones/no-leidas/total?idUsuario=$A1" "" 200 "total baja en 1"
 req PATCH "/notificaciones/leidas?idUsuario=$A1" "" 200 "marcar todas leidas (PATCH)"
 req GET "/notificaciones/no-leidas/total?idUsuario=$A1" "" 200 "total en cero"; check "d['total']==0" "0 no leidas"
 req PUT "/notificaciones/leidas?idUsuario=$A1" "" 405 "PUT ya no se acepta en notificaciones"
+
+echo "=== CORRECCION DE DEFECTOS"
+req POST "/tareas/$T2/equipos?idUsuario=$A3" '{"nombreEquipo":"Equipo Caro"}' 201 "alumno crea su propio equipo"; check "len(d['integrantes'])==1 and d['integrantes'][0]['idUsuario']==$A3" "queda como integrante"
+req POST "/tareas/$T2/equipos?idUsuario=$A3" '{"nombreEquipo":"Otro"}' 409 "no puede crear un segundo equipo"
+ARCH=$(mktemp); echo "contenido de prueba" > "$ARCH"
+C3=$(curl -s -o "$TMP" -w "%{http_code}" -X POST "$API/tareas/$T1/entregas?idUsuario=$A2" -H "Authorization: Bearer ${TOK[$A2]}" -F "archivo=@$(cygpath -w "$ARCH" 2>/dev/null || echo "$ARCH");filename=tarea.txt" -F "descripcion=Mi tarea"); BODY=$(cat "$TMP")
+if [ "$C3" = "201" ]; then PASS=$((PASS+1)); echo "OK   POST entrega con archivo 201"; else FAIL=$((FAIL+1)); echo "FAIL POST entrega con archivo $C3 -> ${BODY:0:200}"; fi
+URLA=$(jget "['archivoUrl']"); C4=$(curl -s -o "$TMP" -w "%{http_code}" "$URLA")
+if [ "$C4" = "200" ] && grep -q "contenido de prueba" "$TMP"; then PASS=$((PASS+1)); echo "OK   check: el archivo subido se puede descargar"; else FAIL=$((FAIL+1)); echo "FAIL check: descarga $C4 $URLA"; fi
+GRANDE=$(mktemp); head -c 21000000 /dev/zero > "$GRANDE"
+C5=$(curl -s -o "$TMP" -w "%{http_code}" -X POST "$API/tareas/$T3/entregas?idUsuario=$A2" -H "Authorization: Bearer ${TOK[$A2]}" -F "archivo=@$(cygpath -w "$GRANDE" 2>/dev/null || echo "$GRANDE");filename=grande.zip"); BODY=$(cat "$TMP")
+if [ "$C5" = "413" ]; then PASS=$((PASS+1)); echo "OK   archivo de 21 MB rechazado con 413: $BODY"; else FAIL=$((FAIL+1)); echo "FAIL archivo grande $C5 -> ${BODY:0:200}"; fi
+rm -f "$ARCH" "$GRANDE"
+req GET "/no-existe" "" 404 "ruta inexistente"; if echo "$BODY" | grep -q "trace"; then FAIL=$((FAIL+1)); echo "FAIL check: la respuesta trae el stack trace"; else PASS=$((PASS+1)); echo "OK   check: sin stack trace en el error"; fi
+req POST "/cursos/$C/tareas?idUsuario=$M" '{"titulo":"X","fechaLimite":"no-es-fecha"}' 400 "fecha mal escrita"; echo "     -> $BODY"
+TOKEN=${TOK[$A3]}; req DELETE "/cursos/$C/alumnos/$A3" "" 204 "alumno se da de baja a si mismo"
+
+echo "=== DEFECTOS REPORTADOS POR EL EQUIPO"
+# Kendar: PUT/DELETE de otros controladores regresaban 200 con null o texto
+TOKEN=${TOK[$A1]}; req PUT "/tareas/$T1?idUsuario=$A1" '{"titulo":"X"}' 403 "alumno no edita tarea"
+TOKEN=${TOK[$A1]}; req DELETE "/tareas/$T1?idUsuario=$A1" "" 403 "alumno no elimina tarea"
+req PUT "/tareas/999?idUsuario=$M" '{"titulo":"X"}' 404 "editar tarea inexistente"
+req DELETE "/tareas/999?idUsuario=$M" "" 404 "eliminar tarea inexistente"
+req PUT "/tareas/$T1?idUsuario=$M" "{\"fechaProgramada\":\"$SEMANA\",\"fechaLimite\":\"$MANANA\"}" 400 "limite antes de programada al editar"
+TOKEN=${TOK[$A1]}; req PUT "/examenes/$X1?idUsuario=$A1" '{"titulo":"X"}' 403 "alumno no edita examen"
+TOKEN=${TOK[$A1]}; req DELETE "/examenes/$X1?idUsuario=$A1" "" 403 "alumno no elimina examen"
+req DELETE "/examenes/999?idUsuario=$M" "" 404 "eliminar examen inexistente"
+TOKEN=${TOK[$A1]}; req PUT "/preguntas/$P1?idUsuario=$A1" '{"pregunta":"X"}' 403 "alumno no edita pregunta"
+TOKEN=${TOK[$A1]}; req DELETE "/preguntas/$P1?idUsuario=$A1" "" 403 "alumno no elimina pregunta"
+TOKEN=${TOK[$A1]}; req PUT "/foros/$F?idUsuario=$A1" '{"titulo":"X"}' 403 "alumno no edita foro"
+TOKEN=${TOK[$A1]}; req DELETE "/foros/$F?idUsuario=$A1" "" 403 "alumno no elimina foro"
+req DELETE "/foros/999?idUsuario=$M" "" 404 "eliminar foro inexistente"
+TOKEN=${TOK[$A2]}; req PUT "/entregas/$EN1?idUsuario=$A2" '{"archivoUrl":"https://drive.example/robo.zip"}' 403 "otro alumno no reemplaza la entrega"
+TOKEN=${TOK[$A1]}; req PUT "/entregas/$EN1?idUsuario=$A1" '{"archivoUrl":"no es enlace"}' 400 "reemplazo con enlace invalido"
+TOKEN=${TOK[$A2]}; req DELETE "/notificaciones/999?idUsuario=$A2" "" 404 "eliminar notificacion inexistente"
+TOKEN=${TOK[$A1]}; req PATCH "/prorrogas/999?idUsuario=$A1" '{"aprobada":true}' 404 "prorroga inexistente"
+req PUT "/foros/$F?idUsuario=$M" '{"titulo":"Dudas generales"}' 200 "maestro edita foro"; check "d['titulo']=='Dudas generales'" "titulo cambiado"
+req DELETE "/comentarios/999?idUsuario=$M" "" 404 "eliminar comentario inexistente"
+
+# Kendar: borrar un curso con tareas, foros y examenes daba 500 (llaves foraneas)
+req POST /cursos "{\"nombre\":\"Curso desechable\",\"idMaestro\":$M}" 201 "curso desechable"; CD=$(jget "['idCurso']"); CODD=$(jget "['codigoInvitacion']")
+req POST "/cursos/unirse?idUsuario=$A1" "{\"codigoInvitacion\":\"$CODD\"}" 201 "alumno se inscribe"
+req POST "/cursos/$CD/tareas?idUsuario=$M" "{\"titulo\":\"T eq\",\"fechaLimite\":\"$SEMANA\",\"esEquipo\":true}" 201 "tarea por equipo"; TD=$(jget "['idTarea']")
+req POST "/tareas/$TD/equipos?idUsuario=$A1" '{"nombreEquipo":"Eq"}' 201 "equipo"
+req POST "/tareas/$TD/entregas?idUsuario=$A1" '{"archivoUrl":"https://drive.example/eq.zip"}' 201 "entrega del equipo"
+req POST "/tareas/$TD/prorrogas?idUsuario=$A1" "{\"nuevaFechaLimite\":\"$(ts '+10 day')\",\"justificacion\":\"x\"}" 201 "prorroga del equipo"
+req POST "/cursos/$CD/foros?idUsuario=$M" '{"titulo":"F"}' 201 "foro"; FD=$(jget "['idForo']")
+req POST "/foros/$FD/comentarios?idUsuario=$A1" '{"contenido":"hola"}' 201 "comentario"
+req POST "/cursos/$CD/examenes?idUsuario=$M" "{\"titulo\":\"E\",\"fechaInicio\":\"$HACE1H\",\"fechaFin\":\"$EN1H\"}" 201 "examen"; XD=$(jget "['idExamen']")
+req POST "/examenes/$XD/preguntas?idUsuario=$M" '{"pregunta":"1+1","tipo":"OPCION_MULTIPLE","opciones":["1","2"],"respuestaCorrecta":"2","valorPuntos":5}' 201 "pregunta"; PD=$(jget "['idPregunta']")
+req POST "/examenes/$XD/resultados?idUsuario=$A1" "{\"respuestas\":[{\"idPregunta\":$PD,\"respuestaDada\":\"2\"}]}" 201 "examen resuelto"
+TOKEN=${TOK[$A1]}; req DELETE "/cursos/$CD" "" 403 "alumno no borra el curso"
+req DELETE "/examenes/$XD?idUsuario=$M" "" 200 "maestro borra examen con preguntas y resultados"
+req DELETE "/tareas/$TD?idUsuario=$M" "" 200 "maestro borra tarea con equipo, entrega y prorroga"
+req POST "/cursos/$CD/tareas?idUsuario=$M" "{\"titulo\":\"T2\",\"fechaLimite\":\"$SEMANA\"}" 201 "otra tarea"; TD2=$(jget "['idTarea']")
+req POST "/tareas/$TD2/entregas?idUsuario=$A1" '{"archivoUrl":"https://drive.example/t2.zip"}' 201 "entrega"
+req DELETE "/cursos/$CD" "" 204 "maestro borra curso con tareas, foros, comentarios e inscripciones"
+req GET "/cursos/$CD" "" 404 "el curso ya no existe"
+req GET "/foros/$FD?idUsuario=$M" "" 404 "su foro tampoco"
+
+# Usuario con informacion relacionada: 409 en lugar de 500
+TOKEN=${TOK[$AD]}; req DELETE "/usuarios/$M" "" 409 "no se borra un maestro con cursos"; echo "     -> $BODY"
+TOKEN=${TOK[$AD]}; req DELETE "/usuarios/$M2" "" 204 "maestro sin datos si se borra"
 
 echo
 echo "TOTAL: $PASS OK, $FAIL FAIL"

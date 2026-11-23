@@ -39,15 +39,15 @@ public class ForosController {
     }
 
     @PutMapping ("/foros/{id}")
-    public Foro editarForo(@PathVariable Integer id,
+    public ResponseEntity<?> editarForo(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody Foro foroNuevo){
         if(!iForo.existsById(id) || !iUsuario.existsById(idUsuario)){
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El foro no existe");
         }
         Foro foroBase = iForo.findById(id).get();
         if(!tienePermiso(foroBase, idUsuario)){
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         if(foroNuevo.getTitulo() != null){
             foroBase.setTitulo(foroNuevo.getTitulo());
@@ -56,28 +56,28 @@ public class ForosController {
             foroBase.setDescripcion(foroNuevo.getDescripcion());
         }
         iForo.save(foroBase);
-        return foroBase;
+        return ResponseEntity.ok(foroBase);
     }
 
     //eliminar foro
     @DeleteMapping ("/foros/{id}")
-    public String eliminarForo(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarForo(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if(!iForo.existsById(id)){
-            return "El foro no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El foro no existe");
         }
         if(!iUsuario.existsById(idUsuario)){
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Foro foroBase = iForo.findById(id).get();
 
         if(!tienePermiso(foroBase, idUsuario)){
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         iForo.deleteById(id);
-        return "Foro eliminado";
+        return ResponseEntity.ok("Foro eliminado");
     }
 
     // ===== GET y POST =====

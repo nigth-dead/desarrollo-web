@@ -9,6 +9,9 @@ import com.uv.backend.service.Filtros;
 import com.uv.backend.entity.Usuario;
 import com.uv.backend.repository.ICursoAlumno;
 import com.uv.backend.repository.IUsuario;
+import com.uv.backend.security.AuthInterceptor;
+import com.uv.backend.security.Permisos;
+import com.uv.backend.security.TokenService.DatosToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,13 +32,17 @@ public class CursoController {
 
     private final ICurso iCurso;
     private final AccesoCurso accesoCurso;
+    private final Permisos permisos;
+
+    private static final String SESION = AuthInterceptor.ATRIBUTO;
 
     public CursoController(IUsuario iUsuario,
-            ICursoAlumno cursoAlumnoRepository, ICurso iCurso, AccesoCurso accesoCurso) {
+            ICursoAlumno cursoAlumnoRepository, ICurso iCurso, AccesoCurso accesoCurso, Permisos permisos) {
         this.iUsuario = iUsuario;
         this.cursoAlumnoRepository = cursoAlumnoRepository;
         this.iCurso = iCurso;
         this.accesoCurso = accesoCurso;
+        this.permisos = permisos;
     }
 
     // Datos para unirse a un curso
@@ -53,7 +60,12 @@ public class CursoController {
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(required = false) Integer idUsuario,
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) Integer idMaestro) {
+            @RequestParam(required = false) Integer idMaestro,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        // sin ?idUsuario= un usuario que no es ADMIN ve solo sus cursos (no los codigos de todos)
+        if (idUsuario == null && sesion != null && !permisos.esAdmin(sesion)) {
+            idUsuario = sesion.idUsuario();
+        }
         List<Curso> cursos;
         if (idUsuario == null) {
             cursos = iCurso.findAll();
@@ -158,17 +170,29 @@ public class CursoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
+    // Ver curso: solo sus miembros o un ADMIN (incluye el codigo de invitacion)
     @GetMapping("/{id}")
-    public ResponseEntity<Curso> obtener(@PathVariable Integer id) {
-        return iCurso.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> obtener(@PathVariable Integer id,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        Optional<Curso> curso = iCurso.findById(id);
+        if (curso.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (sesion != null && !permisos.esAdmin(sesion) && !accesoCurso.esMiembro(curso.get(), sesion.idUsuario())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No perteneces a este curso");
+        }
+        return ResponseEntity.ok(curso.get());
     }
 
+    // Crear curso: un MAESTRO para si mismo, o un ADMIN para cualquier maestro
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody CursoRequest req) {
+    public ResponseEntity<?> crear(@RequestBody CursoRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
         if (req.nombre() == null || req.nombre().isBlank() || req.idMaestro() == null) {
             return ResponseEntity.badRequest().body("nombre e idMaestro son obligatorios");
+        }
+        if (!permisos.esAdmin(sesion) && !permisos.esElMismo(sesion, req.idMaestro())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo puedes crear cursos a tu nombre");
         }
         Optional<Usuario> maestro = iUsuario.findById(req.idMaestro());
         if (maestro.isEmpty() || !"MAESTRO".equals(maestro.get().getRol())) {
@@ -185,14 +209,22 @@ public class CursoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
-    // Editar curso (PUT /cursos/{id}): solo los campos no null se actualizan
+    // Editar curso (PUT /cursos/{id}): maestro del curso o ADMIN. Solo los campos no null se actualizan
     @PutMapping("/{id}")
-    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody CursoRequest req) {
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody CursoRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
         var opt = iCurso.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Curso c = opt.get();
+        if (!esMaestroOAdmin(c, sesion)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede editarlo");
+        }
+        if (req.idMaestro() != null && !req.idMaestro().equals(c.getMaestro().getIdUsuario())
+                && !permisos.esAdmin(sesion)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el administrador puede cambiar el maestro del curso");
+        }
         if (req.nombre() != null && !req.nombre().isBlank()) {
             c.setNombre(req.nombre());
         }
@@ -209,21 +241,31 @@ public class CursoController {
         return ResponseEntity.ok(iCurso.save(c));
     }
 
-    // Eliminar curso (DELETE /cursos/{id})
+    // Eliminar curso (DELETE /cursos/{id}): maestro del curso o ADMIN
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
-        if (!iCurso.existsById(id)) {
+    public ResponseEntity<?> eliminar(@PathVariable Integer id,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        Optional<Curso> curso = iCurso.findById(id);
+        if (curso.isEmpty()) {
             return ResponseEntity.notFound().build();
+        }
+        if (!esMaestroOAdmin(curso.get(), sesion)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede eliminarlo");
         }
         iCurso.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
-    // Dar de baja alumno (DELETE /cursos/{id}/alumnos/{idAlumno})
+    // Dar de baja alumno (DELETE /cursos/{id}/alumnos/{idAlumno}): maestro, ADMIN o el propio alumno
     @DeleteMapping("/{id}/alumnos/{idAlumno}")
-    public ResponseEntity<?> darDeBaja(@PathVariable Integer id, @PathVariable Integer idAlumno) {
-        if (!iCurso.existsById(id)) {
+    public ResponseEntity<?> darDeBaja(@PathVariable Integer id, @PathVariable Integer idAlumno,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        Optional<Curso> curso = iCurso.findById(id);
+        if (curso.isEmpty()) {
             return ResponseEntity.notFound().build();
+        }
+        if (!esMaestroOAdmin(curso.get(), sesion) && !permisos.esElMismo(sesion, idAlumno)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede dar de baja a otros alumnos");
         }
         var clave = new CursoAlumnoId(id, idAlumno);
         if (!cursoAlumnoRepository.existsById(clave)) {
@@ -231,6 +273,10 @@ public class CursoController {
         }
         cursoAlumnoRepository.deleteById(clave);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean esMaestroOAdmin(Curso curso, DatosToken sesion) {
+        return sesion == null || accesoCurso.esMaestro(curso, sesion.idUsuario()) || permisos.esAdmin(sesion);
     }
 
     // Genera un codigo de invitacion de 6 caracteres que no exista ya

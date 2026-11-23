@@ -36,50 +36,50 @@ public class NotificacionController {
 
     //marcar una como leída
     @PatchMapping ("/notificaciones/{id}/leida")
-    public Notificacion marcarLeida(@PathVariable Integer id,
+    public ResponseEntity<?> marcarLeida(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iNotificacion.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La notificación no existe");
         }
         Notificacion notificacion = iNotificacion.findById(id).get();
         if (!tienePermiso(notificacion, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         notificacion.setLeido(true);
         iNotificacion.save(notificacion);
-        return notificacion;
+        return ResponseEntity.ok(notificacion);
     }
 
     //marcar todas como leídas
     @PatchMapping ("/notificaciones/leidas")
-    public String marcarTodasLeidas(@RequestParam Integer idUsuario) {
+    public ResponseEntity<?> marcarTodasLeidas(@RequestParam Integer idUsuario) {
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
         List<Notificacion> pendientes = iNotificacion.findByUsuarioIdUsuarioAndLeidoFalse(idUsuario);
         for (Notificacion n : pendientes) {
             n.setLeido(true);
         }
         iNotificacion.saveAll(pendientes);
-        return pendientes.size() + " notificaciones marcadas como leídas";
+        return ResponseEntity.ok(pendientes.size() + " notificaciones marcadas como leídas");
     }
 
     //eliminar notificación
     @DeleteMapping ("/notificaciones/{id}")
-    public String eliminarNotificacion(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarNotificacion(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iNotificacion.existsById(id)) {
-            return "La notificación no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La notificación no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
         Notificacion notificacion = iNotificacion.findById(id).get();
         if (!tienePermiso(notificacion, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         iNotificacion.deleteById(id);
-        return "Notificación eliminada";
+        return ResponseEntity.ok("Notificación eliminada");
     }
 
     // ===== GET =====

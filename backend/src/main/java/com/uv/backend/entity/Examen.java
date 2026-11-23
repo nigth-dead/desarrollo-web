@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import jakarta.persistence.CascadeType;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,11 +42,11 @@ public class Examen {
     private LocalDateTime fechaFin;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "examen")
+    @OneToMany(mappedBy = "examen", cascade = CascadeType.REMOVE)
     private List<PreguntaExamen> preguntas = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "examen")
+    @OneToMany(mappedBy = "examen", cascade = CascadeType.REMOVE)
     private List<ExamenResultado> resultados = new ArrayList<>();
 
     /**

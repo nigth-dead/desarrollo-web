@@ -2,6 +2,9 @@ package com.uv.backend.controller;
 
 import com.uv.backend.entity.Usuario;
 import com.uv.backend.repository.IUsuario;
+import com.uv.backend.security.AuthInterceptor;
+import com.uv.backend.security.Permisos;
+import com.uv.backend.security.TokenService.DatosToken;
 import com.uv.backend.service.Filtros;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,16 +18,25 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Usuarios. Permisos (segun el usuario del token):
+ * - Listar, crear, cambiar rol y eliminar: solo ADMIN.
+ * - Editar datos y cambiar contrasena: ADMIN o el propio usuario.
+ * - Nadie puede cambiar su propio rol ni eliminar su propia cuenta.
+ */
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
     private static final Set<String> ROLES = Set.of("MAESTRO", "ALUMNO", "ADMIN");
+    private static final String SESION = AuthInterceptor.ATRIBUTO;
 
     private final IUsuario iUsuario;
+    private final Permisos permisos;
 
-    public UsuarioController(IUsuario iUsuario) {
+    public UsuarioController(IUsuario iUsuario, Permisos permisos) {
         this.iUsuario = iUsuario;
+        this.permisos = permisos;
     }
 
     // Datos que llegan en el POST
@@ -46,10 +58,18 @@ public class UsuarioController {
         }
     }
 
-    // Listar usuarios. Filtros: ?rol= (MAESTRO/ALUMNO/ADMIN), ?q= (nombre o email)
+    private static ResponseEntity<String> prohibido(String mensaje) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(mensaje);
+    }
+
+    // Listar usuarios (solo ADMIN). Filtros: ?rol= (MAESTRO/ALUMNO/ADMIN), ?q= (nombre o email)
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(required = false) String rol,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) String q,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        if (!permisos.esAdmin(sesion)) {
+            return prohibido("Solo el administrador puede ver la lista de usuarios");
+        }
         if (rol != null && !ROLES.contains(rol.toUpperCase())) {
             return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
         }
@@ -68,8 +88,13 @@ public class UsuarioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Crear usuario (solo ADMIN; el registro publico es POST /auth/registro)
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody UsuarioRequest req) {
+    public ResponseEntity<?> crear(@RequestBody UsuarioRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        if (!permisos.esAdmin(sesion)) {
+            return prohibido("Solo el administrador puede crear usuarios");
+        }
         if (vacio(req.nombre()) || vacio(req.email()) || vacio(req.password()) || vacio(req.rol())) {
             return ResponseEntity.badRequest().body("nombre, email, password y rol son obligatorios");
         }
@@ -91,9 +116,14 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioResponse.de(guardado));
     }
 
-    // Editar usuario (PUT /usuarios/{id})
+    // Editar usuario (PUT /usuarios/{id}): ADMIN o el propio usuario; el rol solo lo cambia un ADMIN
     @PutMapping("/{id}")
-    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody UsuarioEditRequest req) {
+    public ResponseEntity<?> editar(@PathVariable Integer id, @RequestBody UsuarioEditRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        boolean esAdmin = permisos.esAdmin(sesion);
+        if (!esAdmin && !permisos.esElMismo(sesion, id)) {
+            return prohibido("Solo puedes editar tu propia cuenta");
+        }
         var opt = iUsuario.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -113,17 +143,26 @@ public class UsuarioController {
             if (!ROLES.contains(rol)) {
                 return ResponseEntity.badRequest().body("rol debe ser MAESTRO, ALUMNO o ADMIN");
             }
-            if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
+            if (!rol.equals(u.getRol())) {
+                if (!esAdmin) {
+                    return prohibido("Solo el administrador puede cambiar roles");
+                }
+                if (sesion != null && sesion.idUsuario().equals(id)) {
+                    return prohibido("No puedes cambiar tu propio rol");
+                }
+                u.setRol(rol);
             }
-            u.setRol(rol);
         }
         return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
-    // Cambiar contraseña (PATCH /usuarios/{id}/password)
+    // Cambiar contraseña (PATCH /usuarios/{id}/password): ADMIN o el propio usuario
     @PatchMapping("/{id}/password")
-    public ResponseEntity<?> cambiarPassword(@PathVariable Integer id, @RequestBody PasswordRequest req) {
+    public ResponseEntity<?> cambiarPassword(@PathVariable Integer id, @RequestBody PasswordRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        if (!permisos.esAdmin(sesion) && !permisos.esElMismo(sesion, id)) {
+            return prohibido("Solo puedes cambiar tu propia contraseña");
+        }
         if (vacio(req.password())) {
             return ResponseEntity.badRequest().body("password es obligatorio");
         }
@@ -136,9 +175,13 @@ public class UsuarioController {
         return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
-    // Cambiar rol (PATCH /usuarios/{id}/rol)
+    // Cambiar rol (PATCH /usuarios/{id}/rol): solo ADMIN y no sobre si mismo
     @PatchMapping("/{id}/rol")
-    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestParam(required = false) Integer idUsuario, @RequestBody RolRequest req) {
+    public ResponseEntity<?> cambiarRol(@PathVariable Integer id, @RequestBody RolRequest req,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        if (!permisos.esAdmin(sesion)) {
+            return prohibido("Solo el administrador puede cambiar roles");
+        }
         if (vacio(req.rol())) {
             return ResponseEntity.badRequest().body("rol es obligatorio");
         }
@@ -151,16 +194,23 @@ public class UsuarioController {
             return ResponseEntity.notFound().build();
         }
         Usuario u = opt.get();
-        if (idUsuario != null && idUsuario.equals(id) && !rol.equals(u.getRol())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No puedes cambiar tu propio rol");
+        if (sesion != null && sesion.idUsuario().equals(id) && !rol.equals(u.getRol())) {
+            return prohibido("No puedes cambiar tu propio rol");
         }
         u.setRol(rol);
         return ResponseEntity.ok(UsuarioResponse.de(iUsuario.save(u)));
     }
 
-    // Eliminar usuario (DELETE /usuarios/{id})
+    // Eliminar usuario (DELETE /usuarios/{id}): solo ADMIN y no su propia cuenta
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
+    public ResponseEntity<?> eliminar(@PathVariable Integer id,
+            @RequestAttribute(name = SESION, required = false) DatosToken sesion) {
+        if (!permisos.esAdmin(sesion)) {
+            return prohibido("Solo el administrador puede eliminar usuarios");
+        }
+        if (sesion != null && sesion.idUsuario().equals(id)) {
+            return prohibido("No puedes eliminar tu propia cuenta");
+        }
         if (!iUsuario.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

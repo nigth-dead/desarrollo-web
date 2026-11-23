@@ -107,18 +107,18 @@ public class EntregaController {
     }
 
     @PutMapping (value = "/entregas/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Entrega reemplazarEntrega(@PathVariable Integer id, 
+    public ResponseEntity<?> reemplazarEntrega(@PathVariable Integer id, 
         @RequestParam Integer idUsuario,
         @RequestBody Entrega entregaNueva){
         if (!iEntrega.existsById(id) || !iUsuario.existsById(idUsuario)){
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La entrega no existe");
         }
         Entrega entregaBase = iEntrega.findById(id).get();
 
         if (esDuenoOIntegrante(entregaBase, idUsuario)) {
             if (entregaNueva.getArchivoUrl() != null) {
                 if (!esEnlaceValido(entregaNueva.getArchivoUrl())) {
-                    return null;
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("archivoUrl debe ser un enlace válido (http:// o https://)");
                 }
                 entregaBase.setArchivoUrl(entregaNueva.getArchivoUrl());
                 entregaBase.setFechaEntrega(LocalDateTime.now());
@@ -128,7 +128,7 @@ public class EntregaController {
             }
             if (entregaNueva.getArchivoUrl() != null || entregaNueva.getDescripcion() != null) {
                 iEntrega.save(entregaBase);
-                return entregaBase;
+                return ResponseEntity.ok(entregaBase);
             }
         }
         
@@ -142,10 +142,13 @@ public class EntregaController {
             if(entregaNueva.getCalificacion() != null ||
                 entregaNueva.getComentarioMaestro() != null){
                 iEntrega.save(entregaBase);
-                return entregaBase;
+                return ResponseEntity.ok(entregaBase);
             }
         }
-        return null;
+        if (esDuenoOIntegrante(entregaBase, idUsuario) || esMaestro(entregaBase, idUsuario)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No hay datos para actualizar");
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
     }
 
     // Reemplazar la entrega subiendo un archivo nuevo

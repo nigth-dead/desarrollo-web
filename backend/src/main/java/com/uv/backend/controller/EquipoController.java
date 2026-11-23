@@ -48,17 +48,17 @@ public class EquipoController {
 
     // Editar equipo
     @PutMapping("/equipos/{id}")
-    public Equipo editarEquipo(@PathVariable Integer id,
+    public ResponseEntity<?> editarEquipo(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody Equipo equipoNuevo) {
         if (!iEquipo.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
         }
 
         Equipo equipoBase = iEquipo.findById(id).get();
 
         if (!tienePermiso(equipoBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         if (equipoNuevo.getNombreEquipo() != null) {
@@ -69,55 +69,55 @@ public class EquipoController {
         }
 
         iEquipo.save(equipoBase);
-        return equipoBase;
+        return ResponseEntity.ok(equipoBase);
     }
 
     // Eliminar equipo
     @DeleteMapping("/equipos/{id}")
-    public String eliminarEquipo(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarEquipo(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iEquipo.existsById(id)) {
-            return "El equipo no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Equipo equipoBase = iEquipo.findById(id).get();
 
         if (!tienePermiso(equipoBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         iEquipo.deleteById(id);
-        return "Equipo eliminado";
+        return ResponseEntity.ok("Equipo eliminado");
     }
 
     // Eliminar integrantes del equipo
     @DeleteMapping("/equipos/{id}/integrantes/{idAlumno}")
-    public String eliminarIntegrante(@PathVariable Integer id, 
+    public ResponseEntity<?> eliminarIntegrante(@PathVariable Integer id, 
         @PathVariable Integer idAlumno,
         @RequestParam Integer idUsuario) {
         if (!iEquipo.existsById(id)) {
-            return "El equipo no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El equipo no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Equipo equipo = iEquipo.findById(id).get();
 
         if (!tienePermiso(equipo, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         boolean eliminado = equipo.getIntegrantes().removeIf(alumno -> alumno.getIdUsuario().equals(idAlumno));
         if (!eliminado) {
-            return "El alumno no pertenece a este equipo";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El alumno no pertenece a este equipo");
         }
 
         iEquipo.save(equipo);
-        return "Integrante eliminado";
+        return ResponseEntity.ok("Integrante eliminado");
     }
 
     // ===== GET y POST =====

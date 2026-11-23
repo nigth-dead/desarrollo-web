@@ -54,15 +54,15 @@ public class PreguntaExamenController {
 
     //editar pregunta
     @PutMapping ("/preguntas/{id}")
-    public PreguntaExamen editarPregunta(@PathVariable Integer id,
+    public ResponseEntity<?> editarPregunta(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody PreguntaExamen preguntaNueva) {
         if (!iPreguntaExamen.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La pregunta no existe");
         }
         PreguntaExamen preguntaBase = iPreguntaExamen.findById(id).get();
         if (!tienePermiso(preguntaBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         String tipoAntes = preguntaBase.getTipo();
         String correctaAntes = preguntaBase.getRespuestaCorrecta();
@@ -84,7 +84,7 @@ public class PreguntaExamenController {
         }
         iPreguntaExamen.save(preguntaBase);
         recalificarRespuestas(preguntaBase, tipoAntes, correctaAntes, puntosAntes);
-        return preguntaBase;
+        return ResponseEntity.ok(preguntaBase);
     }
 
     // Al editar la respuesta correcta los examenes se vuelven a calificar
@@ -143,20 +143,20 @@ public class PreguntaExamenController {
 
     //eliminar pregunta
     @DeleteMapping ("/preguntas/{id}")
-    public String eliminarPregunta(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarPregunta(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iPreguntaExamen.existsById(id)) {
-            return "La pregunta no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La pregunta no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
         PreguntaExamen preguntaBase = iPreguntaExamen.findById(id).get();
         if (!tienePermiso(preguntaBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         iPreguntaExamen.deleteById(id);
-        return "Pregunta eliminada";
+        return ResponseEntity.ok("Pregunta eliminada");
     }
 
     // ===== GET y POST =====

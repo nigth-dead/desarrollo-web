@@ -63,58 +63,58 @@ public class ProrrogaController {
 
     //aprobar o rechazar prorrogas
     @PatchMapping ("/prorrogas/{id}")
-    public String actualizarProrroga(@PathVariable Integer id, 
+    public ResponseEntity<?> actualizarProrroga(@PathVariable Integer id, 
         @RequestParam Integer idUsuario,
         @RequestBody Prorroga prorrogaNueva){
         if(!iProrroga.existsById(id)){
-            return "La prorroga no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La prorroga no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Prorroga prorrogaBase = iProrroga.findById(id).get();
 
         if (!esMaestroCurso(prorrogaBase, idUsuario)) {
-            return "Solo el maestro del curso puede aprobar o rechazar prorrogas";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Solo el maestro del curso puede aprobar o rechazar prorrogas");
         }
         if(prorrogaNueva.getAprobada() == null){
-            return "Informacion incompleta";
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Informacion incompleta");
         }
 
         if(Boolean.TRUE.equals(prorrogaNueva.getAprobada())){
             if(prorrogaNueva.getNuevaFechaLimite() == null){
-                return "Informacion incompleta";
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Informacion incompleta");
             }
             prorrogaBase.setAprobada(true);
             prorrogaBase.setNuevaFechaLimite(prorrogaNueva.getNuevaFechaLimite());
             iProrroga.save(prorrogaBase);
-            return "Prorroga aprobada";
+            return ResponseEntity.ok("Prorroga aprobada");
         }
         prorrogaBase.setAprobada(false);
         iProrroga.save(prorrogaBase);
-        return "Prorroga rechazada";
+        return ResponseEntity.ok("Prorroga rechazada");
     }
 
     //eliminar prorroga
     @DeleteMapping ("/prorrogas/{id}")
-    public String eliminarProrroga(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarProrroga(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if(!iProrroga.existsById(id)){
-            return "Prorroga no existente";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Prorroga no existente");
         }
         if(!iUsuario.existsById(idUsuario)){
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Prorroga prorrogaBase = iProrroga.findById(id).get();
 
         if (!tienePermiso(prorrogaBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         iProrroga.deleteById(id);
-        return "Prorroga eliminada";
+        return ResponseEntity.ok("Prorroga eliminada");
     }
 
     // ===== GET y POST =====

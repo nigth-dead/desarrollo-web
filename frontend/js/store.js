@@ -881,10 +881,16 @@ const Store = (() => {
   }
 
   async function resultadoDeExamen(idExamen, idAlumno) {
+    // Solo un alumno presenta exámenes: para maestro o admin no se consulta (evita 404 innecesarios)
+    const actual = usuarioActual();
+    if (!actual || actual.rol !== "ALUMNO") return null;
     return oNull(async () => {
       const detalle = await api.resultados.mio(idExamen);
       if (!detalle || !detalle.resultado) return null;
-      return traducirResultado(detalle.resultado);
+      // El total se toma de las preguntas de las respuestas: el alumno ya no puede consultar
+      // GET /examenes/{id}/preguntas cuando el examen cerró (403) y el total quedaba en 0 → "0 / 100"
+      const total = (detalle.respuestas || []).reduce((s, r) => s + (Number(r.pregunta && r.pregunta.valorPuntos) || 0), 0);
+      return traducirResultado(detalle.resultado, total > 0 ? total : undefined);
     });
   }
 

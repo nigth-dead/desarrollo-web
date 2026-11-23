@@ -77,7 +77,7 @@ function agregarPregunta(datos) {
                 </div>
                 <div>
                     <label>Valor en puntos</label>
-                    <input type="number" class="input-puntos" min="1" value="${datos ? datos.valor_puntos : 10}" required>
+                    <input type="number" class="input-puntos" min="1" step="0.01" value="${datos ? datos.valor_puntos : 10}" required>
                 </div>
             </div>
             <div class="zona-opciones"${datos && datos.tipo === "ABIERTA" ? " hidden" : ""}>

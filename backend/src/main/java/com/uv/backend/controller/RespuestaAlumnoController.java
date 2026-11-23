@@ -1,5 +1,9 @@
 package com.uv.backend.controller;
 
+import org.springframework.http.HttpStatus;
+
+import org.springframework.http.ResponseEntity;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,25 +40,31 @@ public class RespuestaAlumnoController {
 
     //calificar respuesta abierta
     @PatchMapping ("/respuestas/{id}")
-    public RespuestaAlumno calificarRespuesta(@PathVariable Integer id,
+    public ResponseEntity<?> calificarRespuesta(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody RespuestaAlumno respuestaNueva) {
         if (!iRespuestaAlumno.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La respuesta no existe");
         }
         RespuestaAlumno respuestaBase = iRespuestaAlumno.findById(id).get();
         if (!tienePermiso(respuestaBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         if (respuestaNueva.getPuntajeObtenido() != null) {
-            respuestaBase.setPuntajeObtenido(respuestaNueva.getPuntajeObtenido());
+            //el puntaje debe estar entre 0 y el valor de la pregunta
+            BigDecimal puntaje = respuestaNueva.getPuntajeObtenido();
+            BigDecimal maximo = respuestaBase.getPregunta() != null ? respuestaBase.getPregunta().getValorPuntos() : null;
+            if (puntaje.signum() < 0 || (maximo != null && puntaje.compareTo(maximo) > 0)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("El puntaje debe estar entre 0 y el valor de la pregunta");
+            }
+            respuestaBase.setPuntajeObtenido(puntaje);
         }
         if (respuestaNueva.getComentarioMaestro() != null) {
             respuestaBase.setComentarioMaestro(respuestaNueva.getComentarioMaestro());
         }
         iRespuestaAlumno.save(respuestaBase);
         recalcularResultado(respuestaBase.getResultado());
-        return respuestaBase;
+        return ResponseEntity.ok(respuestaBase);
     }
 
     @Autowired

@@ -1,5 +1,15 @@
 package com.uv.backend.entity;
 
+import java.util.ArrayList;
+
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.OneToMany;
+
+import jakarta.persistence.CascadeType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -43,6 +53,11 @@ public class PreguntaExamen {
 
     @Column(name = "valor_puntos", nullable = false, precision = 5, scale = 2)
     private BigDecimal valorPuntos;
+
+    // Respuestas dadas a esta pregunta: se borran junto con la pregunta
+    @JsonIgnore
+    @OneToMany(mappedBy = "pregunta", cascade = CascadeType.REMOVE)
+    private List<RespuestaAlumno> respuestas = new ArrayList<>();
 
     /**
      * Constructor vacío obligatorio para JPA/Hibernate.

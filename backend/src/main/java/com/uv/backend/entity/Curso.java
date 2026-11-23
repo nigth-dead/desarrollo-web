@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import jakarta.persistence.CascadeType;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,19 +41,19 @@ public class Curso {
     private Usuario maestro;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "curso")
+    @OneToMany(mappedBy = "curso", cascade = CascadeType.REMOVE)
     private List<CursoAlumno> alumnos = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "curso")
+    @OneToMany(mappedBy = "curso", cascade = CascadeType.REMOVE)
     private List<Tarea> tareas = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "curso")
+    @OneToMany(mappedBy = "curso", cascade = CascadeType.REMOVE)
     private List<Foro> foros = new ArrayList<>();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "curso")
+    @OneToMany(mappedBy = "curso", cascade = CascadeType.REMOVE)
     private List<Examen> examenes = new ArrayList<>();
 
     /**

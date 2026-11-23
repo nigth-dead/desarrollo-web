@@ -51,7 +51,32 @@ public class ExamenResultadoController {
     public record ExamenRequest(List<RespuestaRequest> respuestas) {}
 
     // Resultado con sus respuestas
-    public record ResultadoDetalle(ExamenResultado resultado, List<RespuestaAlumno> respuestas) {}
+    public record ResultadoDetalle(ExamenResultado resultado, List<?> respuestas) {}
+
+    // Lo que ve el alumno mientras el examen sigue abierto: sin la respuesta correcta
+    public record PreguntaVista(Integer idPregunta, String pregunta, String tipo,
+            String opcionesJson, BigDecimal valorPuntos) {}
+
+    public record RespuestaVista(Integer idRespuesta, Integer idResultado, String respuestaDada,
+            BigDecimal puntajeObtenido, String comentarioMaestro, PreguntaVista pregunta) {}
+
+    // El maestro siempre ve todo. El alumno ve las respuestas correctas solo cuando el examen ya cerro;
+    // antes, quien termina primero podria pasarselas a sus companeros.
+    private List<?> respuestasPara(ExamenResultado r, List<RespuestaAlumno> respuestas, Integer idUsuario) {
+        Examen examen = r.getExamen();
+        boolean esMaestro = accesoCurso.esMaestro(examen.getCurso(), idUsuario);
+        boolean cerrado = LocalDateTime.now().isAfter(examen.getFechaFin());
+        if (esMaestro || cerrado) {
+            return respuestas;
+        }
+        return respuestas.stream().map(ra -> {
+            PreguntaExamen p = ra.getPregunta();
+            PreguntaVista pv = p == null ? null : new PreguntaVista(p.getIdPregunta(), p.getPregunta(),
+                    p.getTipo(), p.getOpcionesJson(), p.getValorPuntos());
+            return new RespuestaVista(ra.getIdRespuesta(), r.getIdResultado(), ra.getRespuestaDada(),
+                    ra.getPuntajeObtenido(), ra.getComentarioMaestro(), pv);
+        }).toList();
+    }
 
     // Enviar examen resuelto (POST /examenes/{id}/resultados?idUsuario=)
     // Las de opcion multiple se califican solas; las abiertas quedan pendientes
@@ -116,7 +141,8 @@ public class ExamenResultadoController {
             resultado.setCalificacionFinal(total);
             resultado = iExamenResultado.save(resultado);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ResultadoDetalle(resultado, guardadas));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResultadoDetalle(resultado, respuestasPara(resultado, guardadas, idUsuario)));
     }
 
     // Ver resultados de todos (GET /examenes/{id}/resultados?idUsuario=) - maestro
@@ -154,7 +180,8 @@ public class ExamenResultadoController {
         }
         return iExamenResultado.findByExamenIdExamenAndAlumnoIdUsuario(idExamen, idUsuario)
                 .<ResponseEntity<?>>map(r -> ResponseEntity.ok(
-                        new ResultadoDetalle(r, iRespuestaAlumno.findByResultadoIdResultado(r.getIdResultado()))))
+                        new ResultadoDetalle(r, respuestasPara(r,
+                                iRespuestaAlumno.findByResultadoIdResultado(r.getIdResultado()), idUsuario))))
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Aun no has presentado este examen"));
     }
 
@@ -170,6 +197,7 @@ public class ExamenResultadoController {
         if (!esAlumno && !accesoCurso.esMaestro(r.getExamen().getCurso(), idUsuario)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
-        return ResponseEntity.ok(new ResultadoDetalle(r, iRespuestaAlumno.findByResultadoIdResultado(id)));
+        return ResponseEntity.ok(new ResultadoDetalle(r,
+                respuestasPara(r, iRespuestaAlumno.findByResultadoIdResultado(id), idUsuario)));
     }
 }

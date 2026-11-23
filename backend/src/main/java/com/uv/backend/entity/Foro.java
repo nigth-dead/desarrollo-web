@@ -1,5 +1,7 @@
 package com.uv.backend.entity;
 
+import jakarta.persistence.CascadeType;
+
 import org.hibernate.annotations.CreationTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -47,7 +49,7 @@ public class Foro {
     private LocalDateTime fechaCreacion;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "foro")
+    @OneToMany(mappedBy = "foro", cascade = CascadeType.REMOVE)
     private List<ForoComentario> comentarios = new ArrayList<>();
 
     /**

@@ -47,17 +47,17 @@ public class TareaController {
 
     //editar tarea
     @PutMapping ("/tareas/{id}")
-    public Tarea editarTarea(@PathVariable Integer id,
+    public ResponseEntity<?> editarTarea(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody Tarea tareaNueva){
         if (!iTarea.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
         }
 
         Tarea tareaBase = iTarea.findById(id).get();
 
         if (!tienePermiso(tareaBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         // La fecha límite no puede ser anterior a la programada
         LocalDateTime programada = tareaNueva.getFechaProgramada() != null
@@ -65,7 +65,7 @@ public class TareaController {
         LocalDateTime limite = tareaNueva.getFechaLimite() != null
                 ? tareaNueva.getFechaLimite() : tareaBase.getFechaLimite();
         if (programada != null && limite != null && limite.isBefore(programada)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("La fecha límite no puede ser anterior a la programada");
         }
 
         //reemplazar contenido de la tarea
@@ -87,28 +87,28 @@ public class TareaController {
 
         iTarea.save(tareaBase);
 
-        return tareaBase;
+        return ResponseEntity.ok(tareaBase);
     }
 
     //eliminar tarea
     @DeleteMapping ("/tareas/{id}")
-    public String eliminarTarea(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarTarea(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if(!iTarea.existsById(id)){
-            return "La tarea no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("La tarea no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
 
         Tarea tareaBase = iTarea.findById(id).get();
 
         if (!tienePermiso(tareaBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
 
         iTarea.deleteById(id);
-        return "Tarea eliminada";
+        return ResponseEntity.ok("Tarea eliminada");
     }
 
     // ===== GET y POST =====

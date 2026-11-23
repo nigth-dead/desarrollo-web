@@ -48,39 +48,39 @@ public class ForoComentarioController {
 
     //editar comentario
     @PutMapping ("/comentarios/{id}")
-    public ForoComentario editarComentario(@PathVariable Integer id,
+    public ResponseEntity<?> editarComentario(@PathVariable Integer id,
         @RequestParam Integer idUsuario,
         @RequestBody ForoComentario comentarioNuevo) {
         if (!iForoComentario.existsById(id) || !iUsuario.existsById(idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El comentario no existe");
         }
         ForoComentario comentarioBase = iForoComentario.findById(id).get();
         if (!esAutor(comentarioBase, idUsuario)) {
-            return null;
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         if (comentarioNuevo.getContenido() != null) {
             comentarioBase.setContenido(comentarioNuevo.getContenido());
         }
         iForoComentario.save(comentarioBase);
-        return comentarioBase;
+        return ResponseEntity.ok(comentarioBase);
     }
 
     //eliminar comentario
     @DeleteMapping ("/comentarios/{id}")
-    public String eliminarComentario(@PathVariable Integer id,
+    public ResponseEntity<?> eliminarComentario(@PathVariable Integer id,
         @RequestParam Integer idUsuario) {
         if (!iForoComentario.existsById(id)) {
-            return "El comentario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El comentario no existe");
         }
         if (!iUsuario.existsById(idUsuario)) {
-            return "El usuario no existe";
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El usuario no existe");
         }
         ForoComentario comentarioBase = iForoComentario.findById(id).get();
         if (!esAutor(comentarioBase, idUsuario) && !esMaestroCurso(comentarioBase, idUsuario)) {
-            return "Usuario no autorizado";
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Usuario no autorizado");
         }
         iForoComentario.deleteById(id);
-        return "Comentario eliminado";
+        return ResponseEntity.ok("Comentario eliminado");
     }
 
     // ===== GET y POST =====
