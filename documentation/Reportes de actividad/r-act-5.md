@@ -29,7 +29,7 @@ Desde el reporte 4 se completó la Entregable 5, la versión candidata del siste
 |------------|------------------------|-----------------|
 | Completar README y preparar evidencias | Edgar Alejandro Cortes Martinez | https://github.com/nigth-dead/desarrollo-web/commit/aee1974 |
 | Preparar evidencias | Edgar Alejandro Cortes Martinez | https://github.com/nigth-dead/desarrollo-web/commit/e6d7e92b4e63c4352dcd3e24389181cc33819fbc |
-| Corregir defectos | Luis David Sosa Fernández | [enlace al commit] |
+| Corregir defectos | Luis David Sosa Fernández | https://github.com/nigth-dead/desarrollo-web/commit/ac72f7162e3e8284d2f41ad89e40cf53c1b81ee8 |
 | Verificar ejecución en WSL | Héctor Manuel Toral Huerta | [enlace al commit] |
 | Probar casos de éxito y error | Kendar Emmanuel Strop Garcia | [enlace al commit] |
 
